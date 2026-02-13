@@ -645,29 +645,12 @@ body::after {
 @media (max-width: 1024px) {
     .hud { 
         padding: 20px 30px;
-        flex-direction: column;
-        gap: 15px;
-        background: linear-gradient(180deg, rgba(10, 14, 39, 0.98) 0%, rgba(10, 14, 39, 0.8) 100%);
     }
     
-    .hud-left, .hud-center, .hud-right {
-        width: 100%;
-        align-items: center;
-        flex-direction: row;
-        justify-content: space-around;
-    }
-    
-    .score-display {
-        font-size: 36px;
-        align-items: center;
-    }
-    
-    .score-display .value { font-size: 56px; }
-    .score-display .label { font-size: 18px; }
-    
-    .timer-display { font-size: 64px; }
-    .combo-display { font-size: 32px; }
-    .stat-value { font-size: 36px; }
+    .score-display .value { font-size: 64px; }
+    .timer-display { font-size: 72px; }
+    .combo-display { font-size: 36px; }
+    .stat-value { font-size: 40px; }
     .game-message { font-size: 70px; }
     
     #gameCanvas {
@@ -1242,4 +1225,110 @@ body::after {
 
 .leaderboard-list::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, var(--neon-orange), var(--neon-gold));
+}
+
+
+/* 模式切換按鈕 */
+.mode-toggle-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255, 60, 0, 0.9), rgba(255, 107, 53, 0.9));
+    border: 3px solid rgba(255, 215, 0, 0.8);
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+        0 5px 20px rgba(255, 60, 0, 0.6),
+        inset 0 -2px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    animation: modeBtnPulse 2s ease-in-out infinite;
+}
+
+@keyframes modeBtnPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 
+            0 5px 20px rgba(255, 60, 0, 0.6),
+            inset 0 -2px 10px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 
+            0 8px 30px rgba(255, 60, 0, 0.8),
+            inset 0 -2px 10px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.mode-toggle-btn:hover {
+    transform: scale(1.1) rotate(180deg);
+    background: linear-gradient(135deg, rgba(0, 255, 247, 0.9), rgba(0, 212, 255, 0.9));
+    border-color: rgba(0, 255, 247, 1);
+    box-shadow: 
+        0 10px 40px rgba(0, 255, 247, 0.8),
+        inset 0 -2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.mode-toggle-btn:active {
+    transform: scale(0.95) rotate(180deg);
+}
+
+.mode-toggle-btn #modeIcon {
+    animation: iconRotate 3s linear infinite;
+}
+
+@keyframes iconRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.mode-toggle-btn:hover #modeIcon {
+    animation: iconRotate 0.5s linear infinite;
+}
+
+/* 模式提示 */
+.mode-hint {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'Orbitron', sans-serif;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+.mode-hint.show {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .mode-toggle-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+        top: 15px;
+        right: 15px;
+    }
+    
+    .mode-hint {
+        top: 75px;
+        right: 15px;
+        font-size: 12px;
+        padding: 8px 12px;
+    }
 }
