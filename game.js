@@ -2,6 +2,15 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// 遊戲模式：'auto'（自動偵測）、'landscape'（橫向）、'portrait'（直向）
+let gameMode = 'auto';
+
+// 載入儲存的模式偏好
+const savedMode = localStorage.getItem('nbaProShooterMode');
+if (savedMode && ['auto', 'landscape', 'portrait'].includes(savedMode)) {
+    gameMode = savedMode;
+}
+
 // 響應式 Canvas 尺寸
 function resizeCanvas() {
     const isMobile = window.innerWidth <= 768;
@@ -19,31 +28,51 @@ function resizeCanvas() {
         usePortraitMode = isPortrait && isMobile;
     }
     
+    let width, height;
+    
     if (usePortraitMode) {
         // 直向模式：正方形
-        canvas.width = Math.min(window.innerWidth - 20, 500);
-        canvas.height = Math.min(window.innerWidth - 20, 500);
+        width = Math.min(window.innerWidth - 20, 500);
+        height = Math.min(window.innerWidth - 20, 500);
     } else if (isSmallMobile) {
-        canvas.width = Math.min(window.innerWidth - 20, 600);
-        canvas.height = Math.min(window.innerHeight * 0.5, 400);
+        width = Math.min(window.innerWidth - 20, 600);
+        height = Math.min(window.innerHeight * 0.5, 400);
     } else if (isMobile) {
-        canvas.width = Math.min(window.innerWidth - 40, 900);
-        canvas.height = Math.min(window.innerHeight * 0.6, 600);
+        width = Math.min(window.innerWidth - 40, 900);
+        height = Math.min(window.innerHeight * 0.6, 600);
     } else {
         // 桌面版：固定尺寸
-        canvas.width = 1400;
-        canvas.height = 800;
+        width = 1400;
+        height = 800;
     }
+    
+    // 處理高 DPI 螢幕（防止模糊）
+    const dpr = window.devicePixelRatio || 1;
+    
+    // 設定 CSS 尺寸
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    
+    // 設定實際畫布尺寸（考慮 DPI）
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    
+    // 縮放 context 以匹配 DPI
+    ctx.scale(dpr, dpr);
+    
+    // 儲存邏輯尺寸供遊戲使用
+    canvas.logicalWidth = width;
+    canvas.logicalHeight = height;
 }
 
 resizeCanvas();
 window.addEventListener('resize', () => {
     const wasActive = gameState.gameActive;
-    const oldWidth = canvas.width;
-    const oldHeight = canvas.height;
+    const oldWidth = canvas.logicalWidth;
+    const oldHeight = canvas.logicalHeight;
     resizeCanvas();
     
-    if (wasActive && player && hoop && (oldWidth !== canvas.width || oldHeight !== canvas.height)) {
+    if (wasActive && player && hoop && (oldWidth !== canvas.logicalWidth || oldHeight !== canvas.logicalHeight)) {
         repositionGameObjects();
     }
 });
@@ -62,9 +91,6 @@ let gameState = {
     successfulShots: 0,
     gameActive: false
 };
-
-// 遊戲模式：'auto'（自動偵測）、'landscape'（橫向）、'portrait'（直向）
-let gameMode = 'auto';
 
 // 遊戲物件
 let player = null;
@@ -215,7 +241,7 @@ class Ball {
         if (this.trail.length > 20) this.trail.shift();
         this.trail.forEach(t => t.life -= 0.05);
         
-        if (this.y > canvas.height + 100) {
+        if (this.y > canvas.logicalHeight + 100) {
             this.active = false;
             if (!this.scored) {
                 gameState.combo = 0;
@@ -434,8 +460,10 @@ class PowerBar {
         
         const barWidth = 400;
         const barHeight = 40;
-        const x = canvas.width / 2 - barWidth / 2;
-        const y = canvas.height - 150;
+        const w = canvas.logicalWidth || canvas.width;
+        const h = canvas.logicalHeight || canvas.height;
+        const x = w / 2 - barWidth / 2;
+        const y = h - 150;
         
         ctx.save();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -465,9 +493,9 @@ class PowerBar {
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 24px Orbitron';
         ctx.textAlign = 'center';
-        ctx.fillText('蓄力中...', canvas.width / 2, y - 25);
+        ctx.fillText('蓄力中...', w / 2, y - 25);
         ctx.font = '20px Orbitron';
-        ctx.fillText(`${Math.floor(this.power)}%`, canvas.width / 2, y + barHeight + 30);
+        ctx.fillText(`${Math.floor(this.power)}%`, w / 2, y + barHeight + 30);
         ctx.restore();
     }
 }
@@ -554,17 +582,17 @@ function repositionGameObjects() {
     
     if (isPortraitMode()) {
         // 直向：上下配置
-        player.x = canvas.width / 2;
-        player.y = canvas.height - 150;
-        hoop.x = canvas.width / 2 - 45;
+        player.x = canvas.logicalWidth / 2;
+        player.y = canvas.logicalHeight - 150;
+        hoop.x = canvas.logicalWidth / 2 - 45;
         hoop.y = 180;
     } else {
         // 橫向：左右配置
-        const scaleX = canvas.width / 1400;
-        const scaleY = canvas.height / 800;
+        const scaleX = canvas.logicalWidth / 1400;
+        const scaleY = canvas.logicalHeight / 800;
         player.x = 300 * scaleX;
-        player.y = canvas.height - 200;
-        hoop.x = canvas.width - 400 * scaleX;
+        player.y = canvas.logicalHeight - 200;
+        hoop.x = canvas.logicalWidth - 400 * scaleX;
         hoop.y = 180 * scaleY;
     }
 }
@@ -572,14 +600,14 @@ function repositionGameObjects() {
 function initGame() {
     if (isPortraitMode()) {
         // 直向：上下配置
-        player = new Player(canvas.width / 2, canvas.height - 150);
-        hoop = new Hoop(canvas.width / 2 - 45, 180);
+        player = new Player(canvas.logicalWidth / 2, canvas.logicalHeight - 150);
+        hoop = new Hoop(canvas.logicalWidth / 2 - 45, 180);
     } else {
         // 橫向：左右配置
-        const scaleX = canvas.width / 1400;
-        const scaleY = canvas.height / 800;
-        player = new Player(300 * scaleX, canvas.height - 200);
-        hoop = new Hoop(canvas.width - 400 * scaleX, 180 * scaleY);
+        const scaleX = canvas.logicalWidth / 1400;
+        const scaleY = canvas.logicalHeight / 800;
+        player = new Player(300 * scaleX, canvas.logicalHeight - 200);
+        hoop = new Hoop(canvas.logicalWidth - 400 * scaleX, 180 * scaleY);
     }
     
     powerBar = new PowerBar();
@@ -632,11 +660,11 @@ function spawnPowerUp() {
         let x, y;
         if (isPortraitMode()) {
             // 直向：道具出現在中間區域
-            x = canvas.width / 2 + (Math.random() - 0.5) * 150;
-            y = canvas.height / 2 + (Math.random() - 0.5) * 100;
+            x = canvas.logicalWidth / 2 + (Math.random() - 0.5) * 150;
+            y = canvas.logicalHeight / 2 + (Math.random() - 0.5) * 100;
         } else {
             // 橫向：道具出現在飛行路徑上
-            x = Math.random() * (canvas.width - 400) + 200;
+            x = Math.random() * (canvas.logicalWidth - 400) + 200;
             y = Math.random() * 200 + 300;
         }
         
@@ -700,7 +728,7 @@ function gameLoop() {
     
     ctx.save();
     ctx.translate(camera.offsetX, camera.offsetY);
-    ctx.clearRect(-camera.offsetX, -camera.offsetY, canvas.width, canvas.height);
+    ctx.clearRect(-camera.offsetX, -camera.offsetY, canvas.logicalWidth, canvas.logicalHeight);
     
     drawBackground();
     
@@ -773,19 +801,19 @@ function gameLoop() {
 
 function drawBackground() {
     const floorHeight = isPortraitMode() ? 100 : 200;
-    const floorGradient = ctx.createLinearGradient(0, canvas.height - floorHeight, 0, canvas.height);
+    const floorGradient = ctx.createLinearGradient(0, canvas.logicalHeight - floorHeight, 0, canvas.logicalHeight);
     floorGradient.addColorStop(0, '#d4a574');
     floorGradient.addColorStop(1, '#b8935f');
     ctx.fillStyle = floorGradient;
-    ctx.fillRect(0, canvas.height - floorHeight, canvas.width, floorHeight);
+    ctx.fillRect(0, canvas.logicalHeight - floorHeight, canvas.logicalWidth, floorHeight);
     
     ctx.strokeStyle = 'rgba(139, 111, 71, 0.3)';
     ctx.lineWidth = 2;
     const lineSpacing = window.innerWidth <= 768 ? 30 : 50;
-    for (let i = 0; i < canvas.width; i += lineSpacing) {
+    for (let i = 0; i < canvas.logicalWidth; i += lineSpacing) {
         ctx.beginPath();
-        ctx.moveTo(i, canvas.height - floorHeight);
-        ctx.lineTo(i, canvas.height);
+        ctx.moveTo(i, canvas.logicalHeight - floorHeight);
+        ctx.lineTo(i, canvas.logicalHeight);
         ctx.stroke();
     }
     
@@ -794,8 +822,8 @@ function drawBackground() {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.lineWidth = 5;
         ctx.beginPath();
-        const arcRadius = Math.min(450, canvas.width * 0.4);
-        ctx.arc(hoop.x + 45, canvas.height - floorHeight, arcRadius, Math.PI * 0.7, Math.PI * 1.3);
+        const arcRadius = Math.min(450, canvas.logicalWidth * 0.4);
+        ctx.arc(hoop.x + 45, canvas.logicalHeight - floorHeight, arcRadius, Math.PI * 0.7, Math.PI * 1.3);
         ctx.stroke();
     }
 }
@@ -850,10 +878,14 @@ function shootBall() {
     let angle, speed, speedAdjust;
     
     if (isPortraitMode()) {
-        // 直向：向上投籃
-        angle = -85 * Math.PI / 180;
-        speed = 12 + (powerBar.power / 100) * 6;
-        speedAdjust = 1 + (distance - 300) / 500;
+        // 直向：向上投籃（更難）
+        angle = -88 * Math.PI / 180; // 接近垂直但稍微偏一點
+        speed = 10 + (powerBar.power / 100) * 5; // 降低速度範圍
+        speedAdjust = 1 + (distance - 350) / 400; // 調整距離計算
+        
+        // 加入隨機偏移增加難度
+        const randomOffset = (Math.random() - 0.5) * 0.05;
+        angle += randomOffset;
     } else {
         // 橫向：斜向投籃
         angle = -50 * Math.PI / 180;
@@ -1154,12 +1186,14 @@ canvas.addEventListener('touchend', (e) => {
 });
 
 // 初始繪製
+const w = canvas.logicalWidth || canvas.width;
+const h = canvas.logicalHeight || canvas.height;
 ctx.fillStyle = '#1a1f3a';
-ctx.fillRect(0, 0, canvas.width, canvas.height);
+ctx.fillRect(0, 0, w, h);
 ctx.fillStyle = '#fff';
 ctx.font = '36px Orbitron';
 ctx.textAlign = 'center';
-ctx.fillText('🏀 NBA PRO SHOOTER 🏀', canvas.width / 2, canvas.height / 2);
+ctx.fillText('🏀 NBA PRO SHOOTER 🏀', w / 2, h / 2);
 
 console.log('🎮 NBA PRO SHOOTER v2.0 已載入！');
 console.log('✨ 新功能：道具系統、風向系統、排行榜');
@@ -1176,14 +1210,7 @@ function toggleGameMode() {
     localStorage.setItem('nbaProShooterMode', gameMode);
     
     // 更新按鈕圖示
-    const modeIcon = document.getElementById('modeIcon');
-    if (gameMode === 'auto') {
-        modeIcon.textContent = '🔄';
-    } else if (gameMode === 'landscape') {
-        modeIcon.textContent = '↔️';
-    } else {
-        modeIcon.textContent = '↕️';
-    }
+    updateModeIcon();
     
     // 顯示提示
     showModeHint();
@@ -1192,6 +1219,19 @@ function toggleGameMode() {
     resizeCanvas();
     if (gameState.gameActive && player && hoop) {
         repositionGameObjects();
+    }
+}
+
+function updateModeIcon() {
+    const modeIcon = document.getElementById('modeIcon');
+    if (!modeIcon) return;
+    
+    if (gameMode === 'auto') {
+        modeIcon.textContent = '🔄';
+    } else if (gameMode === 'landscape') {
+        modeIcon.textContent = '↔️';
+    } else {
+        modeIcon.textContent = '↕️';
     }
 }
 
@@ -1205,17 +1245,13 @@ function showModeHint() {
     showMessage(hints[gameMode], '#00fff7');
 }
 
-// 載入儲存的模式偏好
-const savedMode = localStorage.getItem('nbaProShooterMode');
-if (savedMode && ['auto', 'landscape', 'portrait'].includes(savedMode)) {
-    gameMode = savedMode;
-    const modeIcon = document.getElementById('modeIcon');
-    if (gameMode === 'landscape') {
-        modeIcon.textContent = '↔️';
-    } else if (gameMode === 'portrait') {
-        modeIcon.textContent = '↕️';
-    }
-}
+// 初始化模式圖示
+document.addEventListener('DOMContentLoaded', () => {
+    updateModeIcon();
+});
 
 // 模式切換按鈕事件
-document.getElementById('modeToggleBtn').addEventListener('click', toggleGameMode);
+const modeToggleBtn = document.getElementById('modeToggleBtn');
+if (modeToggleBtn) {
+    modeToggleBtn.addEventListener('click', toggleGameMode);
+}
