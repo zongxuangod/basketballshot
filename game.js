@@ -2,8 +2,42 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = 1400;
-canvas.height = 800;
+// 響應式 Canvas 尺寸
+function resizeCanvas() {
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    
+    if (isPortrait && isMobile) {
+        // 手機直向：使用接近正方形的比例
+        canvas.width = Math.min(window.innerWidth - 20, 500);
+        canvas.height = Math.min(window.innerWidth - 20, 500);
+    } else if (isSmallMobile) {
+        canvas.width = Math.min(window.innerWidth - 20, 600);
+        canvas.height = Math.min(window.innerHeight * 0.5, 400);
+    } else if (isMobile) {
+        canvas.width = Math.min(window.innerWidth - 40, 900);
+        canvas.height = Math.min(window.innerHeight * 0.6, 600);
+    } else {
+        canvas.width = 1400;
+        canvas.height = 800;
+    }
+}
+
+resizeCanvas();
+window.addEventListener('resize', () => {
+    const wasActive = gameState.gameActive;
+    resizeCanvas();
+    if (wasActive && player && hoop) {
+        // 重新調整物件位置
+        const scaleX = canvas.width / 1400;
+        const scaleY = canvas.height / 800;
+        player.x = 300 * scaleX;
+        player.y = canvas.height - 200;
+        hoop.x = canvas.width - 400 * scaleX;
+        hoop.y = 180 * scaleY;
+    }
+});
 
 // 遊戲狀態
 let gameState = {
@@ -495,8 +529,23 @@ class PowerUp {
 
 // ========== 遊戲初始化 ==========
 function initGame() {
-    player = new Player(300, canvas.height - 300);
-    hoop = new Hoop(1000, 250);
+    const scaleX = canvas.width / 1400;
+    const scaleY = canvas.height / 800;
+    
+    // 根據螢幕大小調整位置
+    const isMobile = window.innerWidth <= 768;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    
+    if (isMobile && isPortrait) {
+        // 手機直向：調整為上下配置
+        player = new Player(canvas.width / 2, canvas.height - 150);
+        hoop = new Hoop(canvas.width / 2 - 45, 180);
+    } else {
+        // 桌面或橫向：左右配置
+        player = new Player(300 * scaleX, canvas.height - 200);
+        hoop = new Hoop(canvas.width - 400 * scaleX, 180 * scaleY);
+    }
+    
     powerBar = new PowerBar();
     particles = [];
     powerUps = [];
@@ -543,8 +592,22 @@ function spawnPowerUp() {
     if (Math.random() < 0.3) {
         const types = ['bigHoop', 'slowTime', 'noWind', 'freeze'];
         const type = types[Math.floor(Math.random() * types.length)];
-        const x = Math.random() * (canvas.width - 400) + 200;
-        const y = Math.random() * 200 + 300;
+        
+        // 根據螢幕調整道具位置
+        const isMobile = window.innerWidth <= 768;
+        const isPortrait = window.innerHeight > window.innerWidth;
+        
+        let x, y;
+        if (isMobile && isPortrait) {
+            // 手機直向：道具出現在中間區域
+            x = canvas.width / 2 + (Math.random() - 0.5) * 150;
+            y = canvas.height / 2 + (Math.random() - 0.5) * 100;
+        } else {
+            // 桌面或橫向：道具出現在飛行路徑上
+            x = Math.random() * (canvas.width - 400) + 200;
+            y = Math.random() * 200 + 300;
+        }
+        
         powerUps.push(new PowerUp(type, x, y));
     }
 }
@@ -677,26 +740,36 @@ function gameLoop() {
 }
 
 function drawBackground() {
-    const floorGradient = ctx.createLinearGradient(0, canvas.height - 200, 0, canvas.height);
+    const isMobile = window.innerWidth <= 768;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    
+    // 地板
+    const floorHeight = isMobile && isPortrait ? 100 : 200;
+    const floorGradient = ctx.createLinearGradient(0, canvas.height - floorHeight, 0, canvas.height);
     floorGradient.addColorStop(0, '#d4a574');
     floorGradient.addColorStop(1, '#b8935f');
     ctx.fillStyle = floorGradient;
-    ctx.fillRect(0, canvas.height - 200, canvas.width, 200);
+    ctx.fillRect(0, canvas.height - floorHeight, canvas.width, floorHeight);
     
+    // 地板線條
     ctx.strokeStyle = 'rgba(139, 111, 71, 0.3)';
     ctx.lineWidth = 2;
-    for (let i = 0; i < canvas.width; i += 50) {
+    const lineSpacing = isMobile ? 30 : 50;
+    for (let i = 0; i < canvas.width; i += lineSpacing) {
         ctx.beginPath();
-        ctx.moveTo(i, canvas.height - 200);
+        ctx.moveTo(i, canvas.height - floorHeight);
         ctx.lineTo(i, canvas.height);
         ctx.stroke();
     }
     
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.arc(hoop.x + 45, canvas.height - 200, 450, Math.PI * 0.7, Math.PI * 1.3);
-    ctx.stroke();
+    // 三分線（只在橫向或桌面顯示）
+    if (!isPortrait || !isMobile) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(hoop.x + 45, canvas.height - floorHeight, 450, Math.PI * 0.7, Math.PI * 1.3);
+        ctx.stroke();
+    }
 }
 
 function handleScore() {
@@ -746,9 +819,24 @@ function shootBall() {
     const dy = targetY - startY;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    const angle = -50 * Math.PI / 180;
-    const speed = 16 + (powerBar.power / 100) * 8;
-    const speedAdjust = 1 + (distance - 700) / 1000;
+    // 根據螢幕調整投籃參數
+    const isMobile = window.innerWidth <= 768;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    
+    let angle, speed, speedAdjust;
+    
+    if (isMobile && isPortrait) {
+        // 手機直向：向上投籃
+        angle = -85 * Math.PI / 180; // 幾乎垂直向上
+        speed = 12 + (powerBar.power / 100) * 6;
+        speedAdjust = 1 + (distance - 300) / 500;
+    } else {
+        // 桌面或橫向：斜向投籃
+        angle = -50 * Math.PI / 180;
+        speed = 16 + (powerBar.power / 100) * 8;
+        speedAdjust = 1 + (distance - 700) / 1000;
+    }
+    
     const finalSpeed = speed * Math.max(0.8, Math.min(1.4, speedAdjust));
     
     const vx = Math.cos(angle) * finalSpeed * (dx > 0 ? 1 : -1);
