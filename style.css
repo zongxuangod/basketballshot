@@ -503,6 +503,10 @@ body::after {
     background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
     position: relative;
     animation: canvasNeonBorder 4s ease-in-out infinite;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
 }
 
 @keyframes canvasNeonBorder {
@@ -631,25 +635,343 @@ body::after {
     .title-pro { font-size: 80px; }
     .title-shooter { font-size: 65px; }
     .menu-btn { font-size: 28px; padding: 22px 80px; }
+    
+    #gameCanvas {
+        max-width: 100%;
+        height: auto;
+    }
 }
 
 @media (max-width: 1024px) {
-    .hud { padding: 25px 40px; }
-    .score-display .value { font-size: 72px; }
-    .timer-display { font-size: 80px; }
-    .game-message { font-size: 80px; }
+    .hud { 
+        padding: 20px 30px;
+        flex-direction: column;
+        gap: 15px;
+        background: linear-gradient(180deg, rgba(10, 14, 39, 0.98) 0%, rgba(10, 14, 39, 0.8) 100%);
+    }
+    
+    .hud-left, .hud-center, .hud-right {
+        width: 100%;
+        align-items: center;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+    
+    .score-display {
+        font-size: 36px;
+        align-items: center;
+    }
+    
+    .score-display .value { font-size: 56px; }
+    .score-display .label { font-size: 18px; }
+    
+    .timer-display { font-size: 64px; }
+    .combo-display { font-size: 32px; }
+    .stat-value { font-size: 36px; }
+    .game-message { font-size: 70px; }
+    
+    #gameCanvas {
+        max-width: 95%;
+        height: auto;
+    }
 }
 
 @media (max-width: 768px) {
-    .game-title { font-size: 70px; }
-    .title-pro { font-size: 55px; }
-    .title-shooter { font-size: 45px; }
-    .menu-btn { font-size: 22px; padding: 18px 60px; }
-    .hud { padding: 20px; flex-wrap: wrap; }
-    .score-display .value { font-size: 52px; }
-    .timer-display { font-size: 60px; }
-    .game-message { font-size: 50px; }
-    .controls-hint { flex-direction: column; gap: 15px; }
+    body::after {
+        animation: none;
+        opacity: 0.3;
+    }
+    
+    .game-title { 
+        font-size: 60px;
+        letter-spacing: 8px;
+        margin-bottom: 40px;
+    }
+    
+    .title-pro { font-size: 48px; }
+    .title-shooter { font-size: 38px; }
+    
+    .menu-btn { 
+        font-size: 20px;
+        padding: 16px 50px;
+        letter-spacing: 2px;
+    }
+    
+    .menu-btn.small {
+        font-size: 18px;
+        padding: 14px 40px;
+    }
+    
+    .version {
+        font-size: 14px;
+        margin-top: 30px;
+    }
+    
+    .game-screen {
+        padding: 10px;
+    }
+    
+    .hud { 
+        padding: 15px;
+        gap: 10px;
+    }
+    
+    .hud-left, .hud-center, .hud-right {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .score-display {
+        font-size: 28px;
+    }
+    
+    .score-display .value { font-size: 42px; }
+    .score-display .label { font-size: 14px; }
+    
+    .timer-display { font-size: 48px; }
+    .round-display { font-size: 16px; }
+    .wind-display { font-size: 16px; }
+    .combo-display { font-size: 24px; }
+    
+    .stat-item {
+        flex-direction: row;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .stat-label { font-size: 14px; }
+    .stat-value { font-size: 28px; }
+    
+    .powerup-display {
+        font-size: 14px;
+        padding: 8px 15px;
+    }
+    
+    .game-message { 
+        font-size: 42px;
+        letter-spacing: 4px;
+    }
+    
+    .controls-hint { 
+        flex-direction: column;
+        gap: 10px;
+        bottom: 20px;
+    }
+    
+    .hint-item {
+        font-size: 14px;
+        padding: 10px 20px;
+    }
+    
+    #gameCanvas {
+        width: 100% !important;
+        max-width: 500px;
+        height: auto !important;
+        border-width: 3px;
+        border-radius: 15px;
+    }
+    
+    /* 排行榜 */
+    .leaderboard-content {
+        width: 95%;
+        padding: 10px;
+    }
+    
+    .leaderboard-title {
+        font-size: 48px;
+        margin-bottom: 25px;
+    }
+    
+    .leaderboard-list {
+        padding: 20px;
+        max-height: 400px;
+    }
+    
+    .leaderboard-item {
+        padding: 12px;
+        margin: 10px 0;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .leaderboard-rank {
+        font-size: 24px;
+        min-width: 50px;
+    }
+    
+    .leaderboard-name {
+        font-size: 18px;
+        margin: 0 10px;
+    }
+    
+    .leaderboard-score {
+        font-size: 22px;
+    }
+    
+    .leaderboard-buttons {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .leaderboard-buttons .menu-btn {
+        width: 100%;
+    }
+    
+    /* 遊戲結束畫面 */
+    .gameover-content {
+        width: 95%;
+        padding: 10px;
+    }
+    
+    .gameover-title {
+        font-size: 52px;
+        margin-bottom: 30px;
+    }
+    
+    .final-stats {
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    
+    .stat-row {
+        padding: 12px;
+        margin: 10px 0;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .stat-row .stat-label {
+        font-size: 16px;
+    }
+    
+    .stat-row .stat-value {
+        font-size: 36px;
+    }
+    
+    #playerNameInput {
+        font-size: 18px;
+        padding: 15px;
+    }
+    
+    .name-input-section {
+        margin: 20px 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-title { 
+        font-size: 42px;
+        letter-spacing: 4px;
+    }
+    
+    .title-pro { font-size: 36px; }
+    .title-shooter { font-size: 28px; }
+    
+    .menu-btn { 
+        font-size: 18px;
+        padding: 14px 40px;
+    }
+    
+    .menu-btn.small {
+        font-size: 16px;
+        padding: 12px 35px;
+    }
+    
+    .hud {
+        padding: 10px;
+    }
+    
+    .score-display .value { font-size: 36px; }
+    .timer-display { font-size: 40px; }
+    .combo-display { font-size: 20px; }
+    .game-message { font-size: 32px; }
+    
+    .leaderboard-title {
+        font-size: 36px;
+    }
+    
+    .leaderboard-item {
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    .leaderboard-rank {
+        font-size: 20px;
+        min-width: 40px;
+    }
+    
+    .leaderboard-name {
+        font-size: 16px;
+    }
+    
+    .leaderboard-score {
+        font-size: 18px;
+    }
+    
+    .gameover-title {
+        font-size: 38px;
+    }
+    
+    .stat-row .stat-value {
+        font-size: 28px;
+    }
+    
+    .controls-hint {
+        bottom: 10px;
+    }
+    
+    .hint-item {
+        font-size: 12px;
+        padding: 8px 15px;
+    }
+}
+
+/* 橫向模式優化 */
+@media (max-height: 600px) and (orientation: landscape) {
+    .game-title {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+    
+    .title-pro { font-size: 38px; }
+    .title-shooter { font-size: 30px; }
+    
+    .menu-btn {
+        font-size: 18px;
+        padding: 12px 40px;
+    }
+    
+    .menu-buttons {
+        gap: 15px;
+    }
+    
+    .version {
+        margin-top: 20px;
+        font-size: 12px;
+    }
+    
+    .hud {
+        padding: 10px 20px;
+        flex-direction: row;
+    }
+    
+    .hud-left, .hud-center, .hud-right {
+        flex-direction: column;
+    }
+    
+    .score-display .value { font-size: 32px; }
+    .timer-display { font-size: 36px; }
+    
+    .controls-hint {
+        flex-direction: row;
+        gap: 15px;
+        bottom: 10px;
+    }
+    
+    .hint-item {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
 }
 
 
