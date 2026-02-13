@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA 2K 風格籃球遊戲 - 專業版</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-wrapper">
+        <!-- 主選單 -->
+        <div id="mainMenu" class="menu-screen active">
+            <div class="menu-content">
+                <h1 class="game-title">
+                    <span class="title-nba">NBA</span>
+                    <span class="title-pro">PRO</span>
+                    <span class="title-shooter">SHOOTER</span>
+                </h1>
+                <div class="menu-buttons">
+                    <button class="menu-btn" id="playBtn">🏀 開始遊戲</button>
+                    <button class="menu-btn" id="leaderboardMenuBtn">🏆 排行榜</button>
+                </div>
+                <div class="version">v2.0 Professional Edition</div>
+            </div>
+        </div>
+
+        <!-- 排行榜畫面 -->
+        <div id="leaderboardScreen" class="menu-screen">
+            <div class="leaderboard-content">
+                <h2 class="leaderboard-title">🏆 排行榜 🏆</h2>
+                <div id="leaderboardList" class="leaderboard-list"></div>
+                <div class="leaderboard-buttons">
+                    <button class="menu-btn small" id="backToMenuBtn">返回主選單</button>
+                    <button class="menu-btn small danger" id="clearLeaderboardBtn">清除排行榜</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 遊戲結束畫面 -->
+        <div id="gameOverScreen" class="menu-screen">
+            <div class="gameover-content">
+                <h2 class="gameover-title">🎉 遊戲結束 🎉</h2>
+                <div class="final-stats">
+                    <div class="stat-row">
+                        <span class="stat-label">最終得分</span>
+                        <span class="stat-value gold" id="finalScore">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">命中率</span>
+                        <span class="stat-value cyan" id="finalAccuracy">0%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">最高連擊</span>
+                        <span class="stat-value orange" id="finalCombo">0</span>
+                    </div>
+                </div>
+                <div class="name-input-section">
+                    <input type="text" id="playerNameInput" placeholder="輸入你的名字..." maxlength="15">
+                    <button class="menu-btn" id="submitScoreBtn">提交成績</button>
+                </div>
+                <button class="menu-btn small" id="skipBtn">跳過</button>
+            </div>
+        </div>
+
+        <!-- 遊戲畫面 -->
+        <div id="gameScreen" class="game-screen">
+            <div class="hud">
+                <div class="hud-left">
+                    <div class="score-display">
+                        <span class="label">得分</span>
+                        <span class="value" id="score">0</span>
+                    </div>
+                    <div class="combo-display" id="comboDisplay"></div>
+                </div>
+                <div class="hud-center">
+                    <div class="timer-display">
+                        <span id="timer">60</span>
+                    </div>
+                    <div class="round-display" id="round">第 1/5 輪</div>
+                    <div class="wind-display" id="windDisplay">🌪️ 無風</div>
+                </div>
+                <div class="hud-right">
+                    <div class="stats-display">
+                        <div class="stat-item">
+                            <span class="stat-label">命中率</span>
+                            <span class="stat-value" id="accuracy">0%</span>
+                        </div>
+                    </div>
+                    <div class="powerup-display" id="powerupDisplay"></div>
+                </div>
+            </div>
+
+            <canvas id="gameCanvas"></canvas>
+
+            <div class="game-message" id="gameMessage"></div>
+            
+            <div class="controls-hint">
+                <div class="hint-item">🎯 按住滑鼠/空白鍵蓄力</div>
+                <div class="hint-item">🏀 放開投籃</div>
+                <div class="hint-item">💨 注意風向影響</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
