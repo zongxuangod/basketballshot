@@ -1,1334 +1,1257 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+// ========== 遊戲核心設定 ==========
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+// 遊戲模式：'auto'（自動偵測）、'landscape'（橫向）、'portrait'（直向）
+let gameMode = 'auto';
+
+// 載入儲存的模式偏好
+const savedMode = localStorage.getItem('nbaProShooterMode');
+if (savedMode && ['auto', 'landscape', 'portrait'].includes(savedMode)) {
+    gameMode = savedMode;
 }
 
-:root {
-    --neon-orange: #ff3c00;
-    --neon-cyan: #00fff7;
-    --neon-purple: #b537f2;
-    --neon-gold: #ffd700;
-    --dark-bg: #000000;
-}
-
-body {
-    font-family: 'Rajdhani', sans-serif;
-    background: #000;
-    overflow: hidden;
-    height: 100vh;
-    color: #fff;
-    position: relative;
-}
-
-/* 動態霓虹背景 */
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: 
-        radial-gradient(circle at 20% 30%, rgba(255, 60, 0, 0.2) 0%, transparent 40%),
-        radial-gradient(circle at 80% 70%, rgba(0, 255, 247, 0.2) 0%, transparent 40%),
-        radial-gradient(circle at 50% 50%, rgba(181, 55, 242, 0.15) 0%, transparent 50%),
-        linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
-    animation: backgroundPulse 8s ease-in-out infinite;
-    z-index: 0;
-}
-
-@keyframes backgroundPulse {
-    0%, 100% { 
-        opacity: 0.6; 
-        transform: scale(1) rotate(0deg);
-    }
-    50% { 
-        opacity: 1; 
-        transform: scale(1.05) rotate(1deg);
-    }
-}
-
-/* 粒子效果 */
-body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: 
-        radial-gradient(2px 2px at 20% 30%, rgba(255, 215, 0, 0.4), transparent),
-        radial-gradient(2px 2px at 60% 70%, rgba(0, 255, 247, 0.4), transparent),
-        radial-gradient(1px 1px at 50% 50%, rgba(255, 60, 0, 0.3), transparent),
-        radial-gradient(1px 1px at 80% 10%, rgba(181, 55, 242, 0.3), transparent);
-    background-size: 200px 200px, 300px 300px, 150px 150px, 250px 250px;
-    background-position: 0 0, 40px 60px, 130px 270px, 70px 100px;
-    animation: particleMove 20s linear infinite;
-    z-index: 0;
-    pointer-events: none;
-}
-
-@keyframes particleMove {
-    0% { background-position: 0 0, 40px 60px, 130px 270px, 70px 100px; }
-    100% { background-position: 200px 200px, 240px 260px, 330px 470px, 270px 300px; }
-}
-
-.game-wrapper {
-    width: 100%;
-    height: 100vh;
-    position: relative;
-    z-index: 1;
-}
-
-/* ========== 主選單樣式 ========== */
-.menu-screen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-}
-
-.menu-screen.active {
-    display: flex;
-    animation: fadeIn 0.8s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.menu-content {
-    text-align: center;
-    animation: slideUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    z-index: 2;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(80px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* 標題超級華麗效果 */
-.game-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 140px;
-    margin-bottom: 70px;
-    letter-spacing: 18px;
-    position: relative;
-    font-weight: 900;
-    filter: drop-shadow(0 0 20px rgba(255, 60, 0, 0.8));
-}
-
-.title-nba {
-    display: block;
-    background: linear-gradient(45deg, 
-        var(--neon-orange), 
-        var(--neon-cyan), 
-        var(--neon-purple),
-        var(--neon-orange));
-    background-size: 300% 300%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: rainbowShift 4s ease infinite, titleFloat 3s ease-in-out infinite;
-    text-shadow: none;
-    filter: drop-shadow(0 0 30px rgba(255, 60, 0, 1));
-}
-
-@keyframes rainbowShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-@keyframes titleFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-}
-
-.title-pro {
-    color: var(--neon-gold);
-    display: block;
-    font-size: 110px;
-    text-shadow: 
-        0 0 10px rgba(255, 215, 0, 1),
-        0 0 20px rgba(255, 215, 0, 1),
-        0 0 30px rgba(255, 215, 0, 0.8),
-        0 0 40px rgba(255, 215, 0, 0.6),
-        0 0 60px rgba(255, 215, 0, 0.4),
-        0 0 80px rgba(255, 215, 0, 0.2);
-    animation: goldPulse 2s ease-in-out infinite;
-}
-
-@keyframes goldPulse {
-    0%, 100% { 
-        transform: scale(1);
-        filter: brightness(1);
-    }
-    50% { 
-        transform: scale(1.05);
-        filter: brightness(1.3);
-    }
-}
-
-.title-shooter {
-    color: var(--neon-cyan);
-    display: block;
-    font-size: 90px;
-    text-shadow: 
-        0 0 10px rgba(0, 255, 247, 1),
-        0 0 20px rgba(0, 255, 247, 1),
-        0 0 30px rgba(0, 255, 247, 0.8),
-        0 0 40px rgba(0, 255, 247, 0.6),
-        0 0 60px rgba(0, 255, 247, 0.4);
-    animation: cyanFlicker 3s ease-in-out infinite;
-}
-
-@keyframes cyanFlicker {
-    0%, 100% { opacity: 1; }
-    25% { opacity: 0.9; }
-    50% { opacity: 1; }
-    75% { opacity: 0.95; }
-}
-
-/* 選單按鈕超級華麗 */
-.menu-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 25px;
-    align-items: center;
-}
-
-.menu-btn {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 34px;
-    font-weight: 900;
-    padding: 28px 100px;
-    background: linear-gradient(135deg, #ff3c00, #ff6b35, #ff8c5a, #ff3c00);
-    background-size: 300% 300%;
-    border: 4px solid transparent;
-    border-radius: 50px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    text-transform: uppercase;
-    letter-spacing: 4px;
-    box-shadow: 
-        0 10px 40px rgba(255, 60, 0, 0.7),
-        inset 0 -5px 20px rgba(0, 0, 0, 0.4),
-        0 0 0 0 rgba(255, 60, 0, 0.5);
-    position: relative;
-    overflow: hidden;
-    animation: buttonGradient 3s ease infinite, buttonFloat 3s ease-in-out infinite;
-}
-
-@keyframes buttonGradient {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-@keyframes buttonFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-}
-
-.menu-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-    transition: left 0.7s;
-}
-
-.menu-btn::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.4);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-}
-
-.menu-btn:hover::before {
-    left: 100%;
-}
-
-.menu-btn:hover::after {
-    width: 400px;
-    height: 400px;
-}
-
-.menu-btn:hover {
-    transform: translateY(-10px) scale(1.1);
-    border-color: rgba(255, 215, 0, 1);
-    box-shadow: 
-        0 25px 70px rgba(255, 60, 0, 1),
-        inset 0 -5px 20px rgba(0, 0, 0, 0.4),
-        0 0 40px rgba(255, 215, 0, 0.8),
-        0 0 60px rgba(0, 255, 247, 0.6);
-    text-shadow: 0 0 15px rgba(255, 255, 255, 1);
-    filter: brightness(1.2);
-}
-
-.menu-btn:active {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 
-        0 15px 40px rgba(255, 60, 0, 0.8),
-        inset 0 5px 20px rgba(0, 0, 0, 0.6);
-}
-
-.version {
-    margin-top: 50px;
-    font-size: 20px;
-    font-family: 'Orbitron', sans-serif;
-    color: rgba(255, 255, 255, 0.7);
-    letter-spacing: 4px;
-    text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-    animation: versionBlink 4s ease-in-out infinite;
-}
-
-@keyframes versionBlink {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
-}
-
-/* ========== 遊戲畫面樣式 ========== */
-.game-screen {
-    width: 100%;
-    height: 100vh;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.game-screen.active {
-    display: flex;
-}
-
-/* HUD 超級華麗介面 */
-.hud {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    padding: 35px 60px;
-    z-index: 10;
-    background: linear-gradient(180deg, rgba(10, 14, 39, 0.95) 0%, transparent 100%);
-    backdrop-filter: blur(10px);
-}
-
-.hud-left, .hud-center, .hud-right {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-.hud-center {
-    align-items: center;
-}
-
-.hud-right {
-    align-items: flex-end;
-}
-
-/* 得分顯示 - 超級華麗 */
-.score-display {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 52px;
-    color: var(--neon-gold);
-    text-shadow: 
-        0 0 10px rgba(255, 215, 0, 1),
-        0 0 20px rgba(255, 215, 0, 1),
-        0 0 30px rgba(255, 215, 0, 0.8),
-        0 0 40px rgba(255, 215, 0, 0.6),
-        0 0 60px rgba(255, 215, 0, 0.4);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    animation: scoreGlow 2.5s ease-in-out infinite;
-    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
-}
-
-@keyframes scoreGlow {
-    0%, 100% {
-        transform: scale(1);
-        filter: brightness(1) drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
-    }
-    50% {
-        transform: scale(1.03);
-        filter: brightness(1.3) drop-shadow(0 0 30px rgba(255, 215, 0, 1));
-    }
-}
-
-.score-display .label {
-    font-size: 24px;
-    color: rgba(255, 255, 255, 0.9);
-    letter-spacing: 4px;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-}
-
-.score-display .value {
-    font-size: 96px;
-    line-height: 1;
-    font-weight: 900;
-}
-
-/* 連擊顯示 - 爆炸效果 */
-.combo-display {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 48px;
-    font-weight: 900;
-    color: var(--neon-orange);
-    text-shadow: 
-        0 0 10px rgba(255, 60, 0, 1),
-        0 0 20px rgba(255, 60, 0, 1),
-        0 0 30px rgba(255, 60, 0, 0.8),
-        0 0 40px rgba(255, 60, 0, 0.6),
-        0 0 60px rgba(255, 60, 0, 0.4);
-    animation: comboExplosion 0.7s ease-in-out infinite;
-    filter: drop-shadow(0 0 25px rgba(255, 60, 0, 1));
-}
-
-@keyframes comboExplosion {
-    0%, 100% { 
-        transform: scale(1) rotate(0deg); 
-        filter: brightness(1) drop-shadow(0 0 25px rgba(255, 60, 0, 1));
-    }
-    50% { 
-        transform: scale(1.2) rotate(3deg); 
-        filter: brightness(1.5) drop-shadow(0 0 40px rgba(255, 60, 0, 1));
-    }
-}
-
-/* 計時器 - 霓虹效果 */
-.timer-display {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 110px;
-    font-weight: 900;
-    color: var(--neon-cyan);
-    text-shadow: 
-        0 0 10px rgba(0, 255, 247, 1),
-        0 0 20px rgba(0, 255, 247, 1),
-        0 0 30px rgba(0, 255, 247, 1),
-        0 0 40px rgba(0, 255, 247, 0.8),
-        0 0 60px rgba(0, 255, 247, 0.6),
-        0 0 80px rgba(0, 255, 247, 0.4);
-    line-height: 1;
-    animation: timerNeon 1.2s ease-in-out infinite;
-    filter: drop-shadow(0 0 30px rgba(0, 255, 247, 1));
-}
-
-@keyframes timerNeon {
-    0%, 100% { 
-        transform: scale(1);
-        filter: brightness(1) drop-shadow(0 0 30px rgba(0, 255, 247, 1));
-    }
-    50% { 
-        transform: scale(1.06);
-        filter: brightness(1.4) drop-shadow(0 0 50px rgba(0, 255, 247, 1));
-    }
-}
-
-.round-display {
-    font-size: 26px;
-    font-family: 'Orbitron', sans-serif;
-    color: rgba(255, 255, 255, 0.9);
-    letter-spacing: 3px;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-}
-
-.stats-display {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.stat-label {
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.7);
-    letter-spacing: 2px;
-}
-
-.stat-value {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 48px;
-    font-weight: 900;
-    color: var(--neon-purple);
-    text-shadow: 
-        0 0 10px rgba(181, 55, 242, 1),
-        0 0 20px rgba(181, 55, 242, 0.8),
-        0 0 30px rgba(181, 55, 242, 0.6);
-    filter: drop-shadow(0 0 20px rgba(181, 55, 242, 0.8));
-}
-
-/* Canvas - 霓虹邊框 */
-#gameCanvas {
-    border: 5px solid transparent;
-    border-radius: 25px;
-    box-shadow: 
-        0 0 40px rgba(255, 60, 0, 0.8),
-        0 0 80px rgba(0, 255, 247, 0.6),
-        inset 0 0 100px rgba(0, 0, 0, 0.9);
-    background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
-    position: relative;
-    animation: canvasNeonBorder 4s ease-in-out infinite;
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 0 auto;
-}
-
-@keyframes canvasNeonBorder {
-    0%, 100% {
-        border-color: rgba(255, 60, 0, 1);
-        box-shadow: 
-            0 0 40px rgba(255, 60, 0, 0.8),
-            0 0 80px rgba(0, 255, 247, 0.6),
-            inset 0 0 100px rgba(0, 0, 0, 0.9);
-    }
-    33% {
-        border-color: rgba(0, 255, 247, 1);
-        box-shadow: 
-            0 0 40px rgba(0, 255, 247, 0.8),
-            0 0 80px rgba(181, 55, 242, 0.6),
-            inset 0 0 100px rgba(0, 0, 0, 0.9);
-    }
-    66% {
-        border-color: rgba(181, 55, 242, 1);
-        box-shadow: 
-            0 0 40px rgba(181, 55, 242, 0.8),
-            0 0 80px rgba(255, 60, 0, 0.6),
-            inset 0 0 100px rgba(0, 0, 0, 0.9);
-    }
-}
-
-/* 遊戲訊息 - 爆炸特效 */
-.game-message {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-family: 'Orbitron', sans-serif;
-    font-size: 120px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    text-shadow: 
-        0 0 20px rgba(255, 215, 0, 1),
-        0 0 40px rgba(255, 215, 0, 1),
-        0 0 60px rgba(255, 215, 0, 1),
-        0 0 80px rgba(255, 215, 0, 0.8),
-        0 0 100px rgba(255, 215, 0, 0.6),
-        0 0 140px rgba(255, 215, 0, 0.4);
-    opacity: 0;
-    pointer-events: none;
-    z-index: 50;
-    letter-spacing: 10px;
-    filter: drop-shadow(0 0 50px rgba(255, 215, 0, 1));
-}
-
-.game-message.show {
-    opacity: 1;
-    animation: messageExplosion 2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes messageExplosion {
-    0% {
-        transform: translate(-50%, -50%) scale(0.2) rotate(-15deg);
-        opacity: 0;
-        filter: blur(20px) drop-shadow(0 0 50px rgba(255, 215, 0, 1));
-    }
-    20% {
-        transform: translate(-50%, -50%) scale(1.5) rotate(8deg);
-        opacity: 1;
-        filter: blur(0px) drop-shadow(0 0 80px rgba(255, 215, 0, 1));
-    }
-    40% {
-        transform: translate(-50%, -50%) scale(1.2) rotate(-3deg);
-        opacity: 1;
-    }
-    70% {
-        transform: translate(-50%, -50%) scale(1.1) rotate(1deg);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
-        opacity: 0;
-        filter: blur(10px) drop-shadow(0 0 30px rgba(255, 215, 0, 0.5));
-    }
-}
-
-/* 控制提示 */
-.controls-hint {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 35px;
-    z-index: 10;
-}
-
-.hint-item {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 15px 30px;
-    border-radius: 30px;
-    font-size: 18px;
-    font-family: 'Orbitron', sans-serif;
-    letter-spacing: 2px;
-    backdrop-filter: blur(15px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 
-        0 0 20px rgba(255, 60, 0, 0.4),
-        inset 0 0 20px rgba(255, 255, 255, 0.1);
-    animation: hintPulse 3s ease-in-out infinite;
-}
-
-@keyframes hintPulse {
-    0%, 100% { 
-        transform: scale(1);
-        box-shadow: 
-            0 0 20px rgba(255, 60, 0, 0.4),
-            inset 0 0 20px rgba(255, 255, 255, 0.1);
-    }
-    50% { 
-        transform: scale(1.05);
-        box-shadow: 
-            0 0 30px rgba(255, 60, 0, 0.6),
-            inset 0 0 30px rgba(255, 255, 255, 0.2);
-    }
-}
-
-/* 響應式設計 */
-@media (max-width: 1400px) {
-    .game-title { font-size: 100px; }
-    .title-pro { font-size: 80px; }
-    .title-shooter { font-size: 65px; }
-    .menu-btn { font-size: 28px; padding: 22px 80px; }
+// 響應式 Canvas 尺寸
+function resizeCanvas() {
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+    const isPortrait = window.innerHeight > window.innerWidth;
     
-    #gameCanvas {
-        max-width: 100%;
-        height: auto;
-    }
-}
-
-@media (max-width: 1024px) {
-    .hud { 
-        padding: 20px 30px;
+    // 判斷實際使用的模式
+    let usePortraitMode = false;
+    if (gameMode === 'portrait') {
+        usePortraitMode = true;
+    } else if (gameMode === 'landscape') {
+        usePortraitMode = false;
+    } else {
+        // auto 模式：根據螢幕判斷
+        usePortraitMode = isPortrait && isMobile;
     }
     
-    .score-display .value { font-size: 64px; }
-    .timer-display { font-size: 72px; }
-    .combo-display { font-size: 36px; }
-    .stat-value { font-size: 40px; }
-    .game-message { font-size: 70px; }
+    let width, height;
     
-    #gameCanvas {
-        max-width: 95%;
-        height: auto;
+    if (usePortraitMode) {
+        // 直向模式：正方形
+        width = Math.min(window.innerWidth - 20, 500);
+        height = Math.min(window.innerWidth - 20, 500);
+    } else if (isSmallMobile) {
+        width = Math.min(window.innerWidth - 20, 600);
+        height = Math.min(window.innerHeight * 0.5, 400);
+    } else if (isMobile) {
+        width = Math.min(window.innerWidth - 40, 900);
+        height = Math.min(window.innerHeight * 0.6, 600);
+    } else {
+        // 桌面版：固定尺寸
+        width = 1400;
+        height = 800;
+    }
+    
+    // 處理高 DPI 螢幕（防止模糊）
+    const dpr = window.devicePixelRatio || 1;
+    
+    // 設定 CSS 尺寸
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    
+    // 設定實際畫布尺寸（考慮 DPI）
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    
+    // 縮放 context 以匹配 DPI
+    ctx.scale(dpr, dpr);
+    
+    // 儲存邏輯尺寸供遊戲使用
+    canvas.logicalWidth = width;
+    canvas.logicalHeight = height;
+}
+
+resizeCanvas();
+window.addEventListener('resize', () => {
+    const wasActive = gameState.gameActive;
+    const oldWidth = canvas.logicalWidth;
+    const oldHeight = canvas.logicalHeight;
+    resizeCanvas();
+    
+    if (wasActive && player && hoop && (oldWidth !== canvas.logicalWidth || oldHeight !== canvas.logicalHeight)) {
+        repositionGameObjects();
+    }
+});
+
+// 遊戲狀態
+let gameState = {
+    currentScreen: 'menu',
+    score: 0,
+    timeLeft: 60,
+    combo: 0,
+    maxCombo: 0,
+    currentRound: 1,
+    totalRounds: 5,
+    ballsInRack: 5,
+    totalShots: 0,
+    successfulShots: 0,
+    gameActive: false
+};
+
+// 遊戲物件
+let player = null;
+let ball = null;
+let hoop = null;
+let particles = [];
+let powerBar = null;
+let camera = { shake: 0, offsetX: 0, offsetY: 0 };
+let powerUps = [];
+let activePowerUp = null;
+let powerUpDuration = 0;
+
+// 風力系統
+let wind = {
+    force: 0,
+    direction: 1,
+    changeTimer: 0
+};
+
+// 計時器
+let timerInterval = null;
+let animationFrameId = null;
+
+// ========== 類別定義 ==========
+
+class Player {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 60;
+        this.height = 120;
+        this.shooting = false;
+        this.shootFrame = 0;
+        this.animation = { idle: 0, shoot: 0 };
+    }
+
+    update() {
+        if (this.shooting) {
+            this.shootFrame++;
+            if (this.shootFrame > 20) {
+                this.shooting = false;
+                this.shootFrame = 0;
+            }
+        }
+        this.animation.idle += 0.05;
+    }
+
+    draw() {
+        ctx.save();
+        const bobOffset = Math.sin(this.animation.idle) * 3;
+        const shootOffset = this.shooting ? Math.sin(this.shootFrame * 0.3) * 20 : 0;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + this.height, 35, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        const gradient = ctx.createLinearGradient(this.x - 30, this.y, this.x + 30, this.y + 80);
+        gradient.addColorStop(0, '#1e3799');
+        gradient.addColorStop(1, '#0c2461');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(this.x - 25, this.y + bobOffset, 50, 75);
+        
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('23', this.x, this.y + 50 + bobOffset);
+        
+        ctx.fillStyle = '#d4a574';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - 15 + bobOffset, 25, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(this.x - 8, this.y - 18 + bobOffset, 3, 0, Math.PI * 2);
+        ctx.arc(this.x + 8, this.y - 18 + bobOffset, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#d4a574';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        
+        if (powerBar && powerBar.charging || this.shooting) {
+            ctx.beginPath();
+            ctx.moveTo(this.x + 20, this.y + 20 + bobOffset);
+            ctx.lineTo(this.x + 35, this.y - 30 - shootOffset + bobOffset);
+            ctx.lineTo(this.x + 45, this.y - 55 - shootOffset + bobOffset);
+            ctx.stroke();
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(this.x - 25, this.y + 20 + bobOffset);
+            ctx.lineTo(this.x - 40, this.y + 50 + bobOffset);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(this.x + 25, this.y + 20 + bobOffset);
+            ctx.lineTo(this.x + 40, this.y + 50 + bobOffset);
+            ctx.stroke();
+        }
+        
+        ctx.lineWidth = 12;
+        ctx.strokeStyle = '#0c2461';
+        ctx.beginPath();
+        ctx.moveTo(this.x - 10, this.y + 75 + bobOffset);
+        ctx.lineTo(this.x - 15, this.y + 120 + bobOffset);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(this.x + 10, this.y + 75 + bobOffset);
+        ctx.lineTo(this.x + 15, this.y + 120 + bobOffset);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(this.x - 25, this.y + 120 + bobOffset, 18, 10);
+        ctx.fillRect(this.x + 7, this.y + 120 + bobOffset, 18, 10);
+        
+        ctx.restore();
     }
 }
 
-@media (max-width: 768px) {
-    body::after {
-        animation: none;
-        opacity: 0.3;
+class Ball {
+    constructor(x, y, vx, vy, isMoney = false) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.radius = 18;
+        this.gravity = 0.4;
+        this.rotation = 0;
+        this.active = true;
+        this.scored = false;
+        this.isMoney = isMoney;
+        this.trail = [];
     }
-    
-    .game-title { 
-        font-size: 60px;
-        letter-spacing: 8px;
-        margin-bottom: 40px;
+
+    update() {
+        this.vy += this.gravity;
+        
+        // 風力影響
+        if (activePowerUp !== 'noWind') {
+            this.vx += wind.force * wind.direction * 0.03;
+        }
+        
+        this.x += this.vx;
+        this.y += this.vy;
+        this.rotation += 0.15;
+        
+        this.trail.push({ x: this.x, y: this.y, life: 1, radius: this.radius });
+        if (this.trail.length > 20) this.trail.shift();
+        this.trail.forEach(t => t.life -= 0.05);
+        
+        if (this.y > canvas.logicalHeight + 100) {
+            this.active = false;
+            if (!this.scored) {
+                gameState.combo = 0;
+                updateComboDisplay();
+                showMessage('未進！', '#e74c3c');
+            }
+        }
     }
-    
-    .title-pro { font-size: 48px; }
-    .title-shooter { font-size: 38px; }
-    
-    .menu-btn { 
-        font-size: 20px;
-        padding: 16px 50px;
-        letter-spacing: 2px;
+
+    draw() {
+        ctx.save();
+        
+        this.trail.forEach((t, i) => {
+            ctx.globalAlpha = t.life * 0.4;
+            const gradient = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, t.radius);
+            gradient.addColorStop(0, this.isMoney ? '#ffd700' : '#ff6b35');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, t.radius * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        
+        const glowGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 2);
+        glowGradient.addColorStop(0, this.isMoney ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 107, 53, 0.3)');
+        glowGradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        
+        const ballGradient = ctx.createRadialGradient(-5, -5, 0, 0, 0, this.radius);
+        ballGradient.addColorStop(0, this.isMoney ? '#ffe55c' : '#ff8c5a');
+        ballGradient.addColorStop(1, this.isMoney ? '#ffd700' : '#ff6b35');
+        ctx.fillStyle = ballGradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-this.radius, 0);
+        ctx.lineTo(this.radius, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, -this.radius);
+        ctx.lineTo(0, this.radius);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.7, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        if (this.isMoney) {
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('$', 0, 5);
+        }
+        
+        ctx.restore();
     }
-    
-    .menu-btn.small {
-        font-size: 18px;
-        padding: 14px 40px;
-    }
-    
-    .version {
-        font-size: 14px;
-        margin-top: 30px;
-    }
-    
-    .game-screen {
-        padding: 10px;
-    }
-    
-    .hud { 
-        padding: 15px;
-        gap: 10px;
-    }
-    
-    .hud-left, .hud-center, .hud-right {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .score-display {
-        font-size: 28px;
-    }
-    
-    .score-display .value { font-size: 42px; }
-    .score-display .label { font-size: 14px; }
-    
-    .timer-display { font-size: 48px; }
-    .round-display { font-size: 16px; }
-    .wind-display { font-size: 16px; }
-    .combo-display { font-size: 24px; }
-    
-    .stat-item {
-        flex-direction: row;
-        gap: 10px;
-        align-items: center;
-    }
-    
-    .stat-label { font-size: 14px; }
-    .stat-value { font-size: 28px; }
-    
-    .powerup-display {
-        font-size: 14px;
-        padding: 8px 15px;
-    }
-    
-    .game-message { 
-        font-size: 42px;
-        letter-spacing: 4px;
-    }
-    
-    .controls-hint { 
-        flex-direction: column;
-        gap: 10px;
-        bottom: 20px;
-    }
-    
-    .hint-item {
-        font-size: 14px;
-        padding: 10px 20px;
-    }
-    
-    #gameCanvas {
-        width: 100% !important;
-        max-width: 500px;
-        height: auto !important;
-        border-width: 3px;
-        border-radius: 15px;
-    }
-    
-    /* 排行榜 */
-    .leaderboard-content {
-        width: 95%;
-        padding: 10px;
-    }
-    
-    .leaderboard-title {
-        font-size: 48px;
-        margin-bottom: 25px;
-    }
-    
-    .leaderboard-list {
-        padding: 20px;
-        max-height: 400px;
-    }
-    
-    .leaderboard-item {
-        padding: 12px;
-        margin: 10px 0;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-    
-    .leaderboard-rank {
-        font-size: 24px;
-        min-width: 50px;
-    }
-    
-    .leaderboard-name {
-        font-size: 18px;
-        margin: 0 10px;
-    }
-    
-    .leaderboard-score {
-        font-size: 22px;
-    }
-    
-    .leaderboard-buttons {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .leaderboard-buttons .menu-btn {
-        width: 100%;
-    }
-    
-    /* 遊戲結束畫面 */
-    .gameover-content {
-        width: 95%;
-        padding: 10px;
-    }
-    
-    .gameover-title {
-        font-size: 52px;
-        margin-bottom: 30px;
-    }
-    
-    .final-stats {
-        padding: 25px;
-        margin-bottom: 25px;
-    }
-    
-    .stat-row {
-        padding: 12px;
-        margin: 10px 0;
-        flex-direction: column;
-        gap: 5px;
-    }
-    
-    .stat-row .stat-label {
-        font-size: 16px;
-    }
-    
-    .stat-row .stat-value {
-        font-size: 36px;
-    }
-    
-    #playerNameInput {
-        font-size: 18px;
-        padding: 15px;
-    }
-    
-    .name-input-section {
-        margin: 20px 0;
+
+    checkScore() {
+        if (this.scored || !hoop) return false;
+        
+        const hoopCenterX = hoop.x + hoop.width / 2;
+        const hoopY = hoop.y;
+        const dx = this.x - hoopCenterX;
+        const dy = this.y - hoopY;
+        
+        const hoopWidth = activePowerUp === 'bigHoop' ? hoop.width * 1.5 : hoop.width;
+        
+        if (Math.abs(dx) < hoopWidth / 2 + this.radius &&
+            this.y > hoopY - 20 && this.y < hoopY + 60 &&
+            this.vy > 0) {
+            this.scored = true;
+            return true;
+        }
+        return false;
     }
 }
 
-@media (max-width: 480px) {
-    .game-title { 
-        font-size: 42px;
-        letter-spacing: 4px;
+class Hoop {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 90;
+        this.height = 15;
+        this.animation = 0;
+    }
+
+    update() {
+        this.animation += 0.02;
+    }
+
+    draw() {
+        ctx.save();
+        
+        const wobble = Math.sin(this.animation) * 2;
+        const displayWidth = activePowerUp === 'bigHoop' ? this.width * 1.5 : this.width;
+        
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width / 2, this.y - 150);
+        ctx.lineTo(this.x + this.width / 2, this.y);
+        ctx.stroke();
+        
+        const backboardGradient = ctx.createLinearGradient(
+            this.x - 20, this.y - 150,
+            this.x - 20, this.y - 30
+        );
+        backboardGradient.addColorStop(0, '#ffffff');
+        backboardGradient.addColorStop(1, '#cccccc');
+        ctx.fillStyle = backboardGradient;
+        ctx.fillRect(this.x - 20, this.y - 150, this.width + 40, 120);
+        
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(this.x - 20, this.y - 150, this.width + 40, 120);
+        
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(this.x, this.y - 120, this.width, 60);
+        
+        if (activePowerUp === 'bigHoop') {
+            ctx.strokeStyle = '#00ff00';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ff00';
+        } else {
+            ctx.strokeStyle = '#ff6b35';
+        }
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.ellipse(
+            this.x + this.width / 2,
+            this.y + wobble,
+            displayWidth / 2,
+            10,
+            0, 0, Math.PI * 2
+        );
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 12; i++) {
+            const angle = (Math.PI * 2 * i) / 12;
+            const x1 = this.x + this.width / 2 + Math.cos(angle) * (displayWidth / 2);
+            const y1 = this.y + Math.sin(angle) * 10 + wobble;
+            const x2 = this.x + this.width / 2 + Math.cos(angle) * (displayWidth / 2 - 15);
+            const y2 = this.y + Math.sin(angle) * 8 + 35 + wobble;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+        
+        ctx.restore();
+    }
+}
+
+class Particle {
+    constructor(x, y, color, size = 5) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 10;
+        this.vy = (Math.random() - 0.5) * 10 - 3;
+        this.life = 1;
+        this.color = color;
+        this.size = size;
+        this.gravity = 0.3;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.life -= 0.015;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.life;
+        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+        gradient.addColorStop(0, this.color);
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class PowerBar {
+    constructor() {
+        this.charging = false;
+        this.power = 0;
+        this.maxPower = 100;
+    }
+
+    update() {
+        if (this.charging) {
+            this.power = Math.min(this.maxPower, this.power + 2.5);
+        }
+    }
+
+    draw() {
+        if (!this.charging) return;
+        
+        const barWidth = 400;
+        const barHeight = 40;
+        const w = canvas.logicalWidth || canvas.width;
+        const h = canvas.logicalHeight || canvas.height;
+        const x = w / 2 - barWidth / 2;
+        const y = h - 150;
+        
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x - 15, y - 15, barWidth + 30, barHeight + 30);
+        
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x, y, barWidth, barHeight);
+        
+        const powerWidth = (this.power / this.maxPower) * barWidth;
+        const powerGradient = ctx.createLinearGradient(x, y, x + powerWidth, y);
+        
+        if (this.power < 30) {
+            powerGradient.addColorStop(0, '#2ecc71');
+            powerGradient.addColorStop(1, '#27ae60');
+        } else if (this.power < 70) {
+            powerGradient.addColorStop(0, '#f39c12');
+            powerGradient.addColorStop(1, '#e67e22');
+        } else {
+            powerGradient.addColorStop(0, '#e74c3c');
+            powerGradient.addColorStop(1, '#c0392b');
+        }
+        
+        ctx.fillStyle = powerGradient;
+        ctx.fillRect(x, y, powerWidth, barHeight);
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 24px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.fillText('蓄力中...', w / 2, y - 25);
+        ctx.font = '20px Orbitron';
+        ctx.fillText(`${Math.floor(this.power)}%`, w / 2, y + barHeight + 30);
+        ctx.restore();
+    }
+}
+
+class PowerUp {
+    constructor(type, x, y) {
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.size = 35;
+        this.rotation = 0;
+        this.collected = false;
+        this.bobOffset = 0;
+        
+        this.config = {
+            bigHoop: { color: '#2ecc71', icon: '🎯', name: '大籃框' },
+            slowTime: { color: '#3498db', icon: '⏰', name: '時間減速' },
+            noWind: { color: '#9b59b6', icon: '🌪️', name: '無風' },
+            freeze: { color: '#1abc9c', icon: '❄️', name: '凍結時間' }
+        };
+    }
+
+    update() {
+        this.rotation += 0.05;
+        this.bobOffset = Math.sin(Date.now() * 0.003) * 10;
+    }
+
+    draw() {
+        if (this.collected) return;
+        
+        const config = this.config[this.type];
+        ctx.save();
+        ctx.translate(this.x, this.y + this.bobOffset);
+        ctx.rotate(this.rotation);
+        
+        ctx.fillStyle = config.color;
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.size + 15, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = config.color;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = config.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        ctx.font = 'bold 28px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(config.icon, 0, 0);
+        
+        ctx.restore();
+    }
+
+    checkCollision(ball) {
+        if (this.collected || !ball || !ball.active) return false;
+        const dx = ball.x - this.x;
+        const dy = ball.y - (this.y + this.bobOffset);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < this.size + ball.radius;
+    }
+}
+
+// ========== 遊戲初始化 ==========
+function isPortraitMode() {
+    if (gameMode === 'portrait') return true;
+    if (gameMode === 'landscape') return false;
+    // auto 模式
+    const isMobile = window.innerWidth <= 768;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    return isMobile && isPortrait;
+}
+
+function repositionGameObjects() {
+    if (!player || !hoop) return;
+    
+    if (isPortraitMode()) {
+        // 直向：上下配置
+        player.x = canvas.logicalWidth / 2;
+        player.y = canvas.logicalHeight - 150;
+        hoop.x = canvas.logicalWidth / 2 - 45;
+        hoop.y = 180;
+    } else {
+        // 橫向：左右配置
+        const scaleX = canvas.logicalWidth / 1400;
+        const scaleY = canvas.logicalHeight / 800;
+        player.x = 300 * scaleX;
+        player.y = canvas.logicalHeight - 200;
+        hoop.x = canvas.logicalWidth - 400 * scaleX;
+        hoop.y = 180 * scaleY;
+    }
+}
+
+function initGame() {
+    if (isPortraitMode()) {
+        // 直向：上下配置
+        player = new Player(canvas.logicalWidth / 2, canvas.logicalHeight - 150);
+        hoop = new Hoop(canvas.logicalWidth / 2 - 45, 180);
+    } else {
+        // 橫向：左右配置
+        const scaleX = canvas.logicalWidth / 1400;
+        const scaleY = canvas.logicalHeight / 800;
+        player = new Player(300 * scaleX, canvas.logicalHeight - 200);
+        hoop = new Hoop(canvas.logicalWidth - 400 * scaleX, 180 * scaleY);
     }
     
-    .title-pro { font-size: 36px; }
-    .title-shooter { font-size: 28px; }
+    powerBar = new PowerBar();
+    particles = [];
+    powerUps = [];
+    ball = null;
+    activePowerUp = null;
+    powerUpDuration = 0;
     
-    .menu-btn { 
-        font-size: 18px;
-        padding: 14px 40px;
-    }
+    wind.force = Math.random() * 3;
+    wind.direction = Math.random() > 0.5 ? 1 : -1;
+    wind.changeTimer = 0;
     
-    .menu-btn.small {
-        font-size: 16px;
-        padding: 12px 35px;
-    }
+    gameState = {
+        ...gameState,
+        score: 0,
+        timeLeft: 60,
+        combo: 0,
+        maxCombo: 0,
+        currentRound: 1,
+        ballsInRack: 5,
+        totalShots: 0,
+        successfulShots: 0,
+        gameActive: true
+    };
     
-    .hud {
-        padding: 10px;
-    }
-    
-    .score-display .value { font-size: 36px; }
-    .timer-display { font-size: 40px; }
-    .combo-display { font-size: 20px; }
-    .game-message { font-size: 32px; }
-    
-    .leaderboard-title {
-        font-size: 36px;
-    }
-    
-    .leaderboard-item {
-        padding: 10px;
-        font-size: 14px;
-    }
-    
-    .leaderboard-rank {
-        font-size: 20px;
-        min-width: 40px;
-    }
-    
-    .leaderboard-name {
-        font-size: 16px;
-    }
-    
-    .leaderboard-score {
-        font-size: 18px;
-    }
-    
-    .gameover-title {
-        font-size: 38px;
-    }
-    
-    .stat-row .stat-value {
-        font-size: 28px;
-    }
-    
-    .controls-hint {
-        bottom: 10px;
-    }
-    
-    .hint-item {
-        font-size: 12px;
-        padding: 8px 15px;
+    updateUI();
+    updateWindDisplay();
+}
+
+function updateWindDisplay() {
+    const windEl = document.getElementById('windDisplay');
+    if (wind.force < 0.5) {
+        windEl.textContent = '🌤️ 無風';
+        windEl.style.color = 'rgba(255, 255, 255, 0.7)';
+    } else {
+        const direction = wind.direction > 0 ? '→' : '←';
+        const strength = wind.force < 1.5 ? '微風' : wind.force < 2.5 ? '強風' : '暴風';
+        windEl.textContent = `💨 ${direction} ${strength}`;
+        windEl.style.color = wind.force > 2 ? '#ff3c00' : '#00fff7';
     }
 }
 
-/* 橫向模式優化 */
-@media (max-height: 600px) and (orientation: landscape) {
-    .game-title {
-        font-size: 48px;
-        margin-bottom: 20px;
+function spawnPowerUp() {
+    if (powerUps.length > 0) return;
+    if (Math.random() < 0.3) {
+        const types = ['bigHoop', 'slowTime', 'noWind', 'freeze'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        
+        let x, y;
+        if (isPortraitMode()) {
+            // 直向：道具出現在中間區域
+            x = canvas.logicalWidth / 2 + (Math.random() - 0.5) * 150;
+            y = canvas.logicalHeight / 2 + (Math.random() - 0.5) * 100;
+        } else {
+            // 橫向：道具出現在飛行路徑上
+            x = Math.random() * (canvas.logicalWidth - 400) + 200;
+            y = Math.random() * 200 + 300;
+        }
+        
+        powerUps.push(new PowerUp(type, x, y));
     }
+}
+
+function activatePowerUp(type) {
+    activePowerUp = type;
+    powerUpDuration = 300;
     
-    .title-pro { font-size: 38px; }
-    .title-shooter { font-size: 30px; }
+    const powerupEl = document.getElementById('powerupDisplay');
+    const config = {
+        bigHoop: '🎯 大籃框',
+        slowTime: '⏰ 時間減速',
+        noWind: '🌪️ 無風',
+        freeze: '❄️ 凍結時間'
+    };
     
-    .menu-btn {
-        font-size: 18px;
-        padding: 12px 40px;
+    powerupEl.textContent = config[type];
+    powerupEl.classList.add('active');
+    
+    if (type === 'slowTime') {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            gameState.timeLeft--;
+            updateUI();
+            if (gameState.timeLeft <= 0) endGame();
+        }, 2000);
     }
-    
-    .menu-buttons {
-        gap: 15px;
-    }
-    
-    .version {
-        margin-top: 20px;
-        font-size: 12px;
-    }
-    
-    .hud {
-        padding: 10px 20px;
-        flex-direction: row;
-    }
-    
-    .hud-left, .hud-center, .hud-right {
-        flex-direction: column;
-    }
-    
-    .score-display .value { font-size: 32px; }
-    .timer-display { font-size: 36px; }
-    
-    .controls-hint {
-        flex-direction: row;
-        gap: 15px;
-        bottom: 10px;
+}
+
+function deactivatePowerUp() {
+    if (activePowerUp === 'slowTime') {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            gameState.timeLeft--;
+            updateUI();
+            if (gameState.timeLeft <= 0) endGame();
+        }, 1000);
     }
     
-    .hint-item {
-        font-size: 12px;
-        padding: 6px 12px;
-    }
+    activePowerUp = null;
+    document.getElementById('powerupDisplay').classList.remove('active');
 }
 
-
-/* 風向顯示 */
-.wind-display {
-    font-size: 24px;
-    font-family: 'Orbitron', sans-serif;
-    color: rgba(255, 255, 255, 0.9);
-    letter-spacing: 2px;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-    margin-top: 10px;
-}
-
-/* 道具顯示 */
-.powerup-display {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 12px 20px;
-    border-radius: 20px;
-    font-size: 18px;
-    font-family: 'Orbitron', sans-serif;
-    letter-spacing: 2px;
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 215, 0, 0.5);
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-    animation: powerupPulse 1s ease-in-out infinite;
-    display: none;
-}
-
-.powerup-display.active {
-    display: block;
-}
-
-@keyframes powerupPulse {
-    0%, 100% { 
-        transform: scale(1);
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-    }
-    50% { 
-        transform: scale(1.05);
-        box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
-    }
-}
-
-/* 小按鈕樣式 */
-.menu-btn.small {
-    font-size: 24px;
-    padding: 18px 60px;
-}
-
-.menu-btn.danger {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-
-.menu-btn.danger:hover {
-    box-shadow: 
-        0 25px 70px rgba(231, 76, 60, 1),
-        inset 0 -5px 20px rgba(0, 0, 0, 0.4),
-        0 0 40px rgba(231, 76, 60, 0.8);
-}
-
-/* 排行榜畫面 */
-.leaderboard-content {
-    text-align: center;
-    animation: slideUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    max-width: 800px;
-    width: 90%;
-}
-
-.leaderboard-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 80px;
-    font-weight: 900;
-    margin-bottom: 40px;
-    background: linear-gradient(45deg, var(--neon-gold), var(--neon-orange), var(--neon-gold));
-    background-size: 200% 200%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: gradientShift 3s ease infinite;
-    filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
-}
-
-.leaderboard-list {
-    background: rgba(0, 0, 0, 0.6);
-    border: 3px solid rgba(255, 215, 0, 0.5);
-    border-radius: 20px;
-    padding: 30px;
-    margin-bottom: 30px;
-    max-height: 500px;
-    overflow-y: auto;
-    backdrop-filter: blur(10px);
-}
-
-.leaderboard-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    margin: 15px 0;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s;
-    font-family: 'Orbitron', sans-serif;
-}
-
-.leaderboard-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateX(10px);
-    border-color: rgba(255, 215, 0, 0.5);
-}
-
-.leaderboard-item.rank-1 {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 215, 0, 0.1));
-    border-color: rgba(255, 215, 0, 0.8);
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
-}
-
-.leaderboard-item.rank-2 {
-    background: linear-gradient(135deg, rgba(192, 192, 192, 0.3), rgba(192, 192, 192, 0.1));
-    border-color: rgba(192, 192, 192, 0.8);
-}
-
-.leaderboard-item.rank-3 {
-    background: linear-gradient(135deg, rgba(205, 127, 50, 0.3), rgba(205, 127, 50, 0.1));
-    border-color: rgba(205, 127, 50, 0.8);
-}
-
-.leaderboard-rank {
-    font-size: 36px;
-    font-weight: 900;
-    min-width: 80px;
-}
-
-.leaderboard-name {
-    flex: 1;
-    font-size: 24px;
-    margin: 0 20px;
-}
-
-.leaderboard-score {
-    font-size: 32px;
-    font-weight: 900;
-    color: var(--neon-gold);
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-}
-
-.leaderboard-buttons {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-}
-
-.empty-leaderboard {
-    padding: 60px;
-    font-size: 24px;
-    color: rgba(255, 255, 255, 0.5);
-}
-
-/* 遊戲結束畫面 */
-.gameover-content {
-    text-align: center;
-    animation: slideUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    max-width: 700px;
-}
-
-.gameover-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 90px;
-    font-weight: 900;
-    margin-bottom: 50px;
-    background: linear-gradient(45deg, var(--neon-orange), var(--neon-cyan), var(--neon-purple), var(--neon-orange));
-    background-size: 300% 300%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: rainbowShift 4s ease infinite;
-    filter: drop-shadow(0 0 40px rgba(255, 60, 0, 0.8));
-}
-
-.final-stats {
-    background: rgba(0, 0, 0, 0.6);
-    border: 3px solid rgba(255, 215, 0, 0.5);
-    border-radius: 20px;
-    padding: 40px;
-    margin-bottom: 40px;
-    backdrop-filter: blur(10px);
-}
-
-.stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    margin: 15px 0;
-    font-family: 'Orbitron', sans-serif;
-}
-
-.stat-row .stat-label {
-    font-size: 24px;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.stat-row .stat-value {
-    font-size: 48px;
-    font-weight: 900;
-}
-
-.stat-row .stat-value.gold {
-    color: var(--neon-gold);
-    text-shadow: 0 0 20px rgba(255, 215, 0, 1);
-}
-
-.stat-row .stat-value.cyan {
-    color: var(--neon-cyan);
-    text-shadow: 0 0 20px rgba(0, 255, 247, 1);
-}
-
-.stat-row .stat-value.orange {
-    color: var(--neon-orange);
-    text-shadow: 0 0 20px rgba(255, 60, 0, 1);
-}
-
-.name-input-section {
-    margin: 30px 0;
-}
-
-#playerNameInput {
-    width: 100%;
-    padding: 20px;
-    font-size: 24px;
-    font-family: 'Orbitron', sans-serif;
-    background: rgba(255, 255, 255, 0.1);
-    border: 3px solid rgba(255, 215, 0, 0.5);
-    border-radius: 15px;
-    color: #fff;
-    text-align: center;
-    margin-bottom: 20px;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s;
-}
-
-#playerNameInput:focus {
-    outline: none;
-    border-color: rgba(255, 215, 0, 1);
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
-    background: rgba(255, 255, 255, 0.15);
-}
-
-#playerNameInput::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-/* 滾動條美化 */
-.leaderboard-list::-webkit-scrollbar {
-    width: 10px;
-}
-
-.leaderboard-list::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
-}
-
-.leaderboard-list::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, var(--neon-gold), var(--neon-orange));
-    border-radius: 10px;
-}
-
-.leaderboard-list::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, var(--neon-orange), var(--neon-gold));
-}
-
-
-/* 模式切換按鈕 */
-.mode-toggle-btn {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(255, 60, 0, 0.9), rgba(255, 107, 53, 0.9));
-    border: 3px solid rgba(255, 215, 0, 0.8);
-    color: white;
-    font-size: 28px;
-    cursor: pointer;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 
-        0 5px 20px rgba(255, 60, 0, 0.6),
-        inset 0 -2px 10px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-    animation: modeBtnPulse 2s ease-in-out infinite;
-}
-
-@keyframes modeBtnPulse {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: 
-            0 5px 20px rgba(255, 60, 0, 0.6),
-            inset 0 -2px 10px rgba(0, 0, 0, 0.3);
-    }
-    50% {
-        transform: scale(1.05);
-        box-shadow: 
-            0 8px 30px rgba(255, 60, 0, 0.8),
-            inset 0 -2px 10px rgba(0, 0, 0, 0.3);
-    }
-}
-
-.mode-toggle-btn:hover {
-    transform: scale(1.1) rotate(180deg);
-    background: linear-gradient(135deg, rgba(0, 255, 247, 0.9), rgba(0, 212, 255, 0.9));
-    border-color: rgba(0, 255, 247, 1);
-    box-shadow: 
-        0 10px 40px rgba(0, 255, 247, 0.8),
-        inset 0 -2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.mode-toggle-btn:active {
-    transform: scale(0.95) rotate(180deg);
-}
-
-.mode-toggle-btn #modeIcon {
-    animation: iconRotate 3s linear infinite;
-}
-
-@keyframes iconRotate {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.mode-toggle-btn:hover #modeIcon {
-    animation: iconRotate 0.5s linear infinite;
-}
-
-/* 模式提示 */
-.mode-hint {
-    position: fixed;
-    top: 90px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-family: 'Orbitron', sans-serif;
-    z-index: 999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    border: 2px solid rgba(255, 215, 0, 0.5);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-}
-
-.mode-hint.show {
-    opacity: 1;
-}
-
-@media (max-width: 768px) {
-    .mode-toggle-btn {
-        width: 50px;
-        height: 50px;
-        font-size: 24px;
-        top: 15px;
-        right: 15px;
+// ========== 遊戲循環 ==========
+function gameLoop() {
+    if (!gameState.gameActive) return;
+    
+    if (camera.shake > 0) {
+        camera.offsetX = (Math.random() - 0.5) * camera.shake;
+        camera.offsetY = (Math.random() - 0.5) * camera.shake;
+        camera.shake *= 0.92;
+        if (camera.shake < 0.1) {
+            camera.shake = 0;
+            camera.offsetX = 0;
+            camera.offsetY = 0;
+        }
     }
     
-    .mode-hint {
-        top: 75px;
-        right: 15px;
-        font-size: 12px;
-        padding: 8px 12px;
+    ctx.save();
+    ctx.translate(camera.offsetX, camera.offsetY);
+    ctx.clearRect(-camera.offsetX, -camera.offsetY, canvas.logicalWidth, canvas.logicalHeight);
+    
+    drawBackground();
+    
+    if (hoop) {
+        hoop.update();
+        hoop.draw();
     }
+    
+    if (player) {
+        player.update();
+        player.draw();
+    }
+    
+    powerUps.forEach(p => {
+        p.update();
+        p.draw();
+    });
+    
+    if (powerBar) {
+        powerBar.update();
+        powerBar.draw();
+    }
+    
+    if (ball && ball.active) {
+        ball.update();
+        ball.draw();
+        
+        powerUps.forEach(p => {
+            if (p.checkCollision(ball)) {
+                p.collected = true;
+                activatePowerUp(p.type);
+                showMessage(`獲得 ${p.config[p.type].name}！`, '#2ecc71');
+                for (let i = 0; i < 30; i++) {
+                    particles.push(new Particle(p.x, p.y, p.config[p.type].color, 8));
+                }
+            }
+        });
+        
+        if (ball.checkScore()) {
+            handleScore();
+        }
+    }
+    
+    powerUps = powerUps.filter(p => !p.collected);
+    
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+        p.update();
+        p.draw();
+    });
+    
+    if (powerUpDuration > 0) {
+        powerUpDuration--;
+        if (powerUpDuration === 0) {
+            deactivatePowerUp();
+        }
+    }
+    
+    wind.changeTimer++;
+    if (wind.changeTimer > 180) {
+        wind.force = Math.random() * 3;
+        wind.direction = Math.random() > 0.5 ? 1 : -1;
+        wind.changeTimer = 0;
+        updateWindDisplay();
+    }
+    
+    ctx.restore();
+    animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+function drawBackground() {
+    const floorHeight = isPortraitMode() ? 100 : 200;
+    const floorGradient = ctx.createLinearGradient(0, canvas.logicalHeight - floorHeight, 0, canvas.logicalHeight);
+    floorGradient.addColorStop(0, '#d4a574');
+    floorGradient.addColorStop(1, '#b8935f');
+    ctx.fillStyle = floorGradient;
+    ctx.fillRect(0, canvas.logicalHeight - floorHeight, canvas.logicalWidth, floorHeight);
+    
+    ctx.strokeStyle = 'rgba(139, 111, 71, 0.3)';
+    ctx.lineWidth = 2;
+    const lineSpacing = window.innerWidth <= 768 ? 30 : 50;
+    for (let i = 0; i < canvas.logicalWidth; i += lineSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(i, canvas.logicalHeight - floorHeight);
+        ctx.lineTo(i, canvas.logicalHeight);
+        ctx.stroke();
+    }
+    
+    // 三分線（橫向模式顯示）
+    if (!isPortraitMode()) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        const arcRadius = Math.min(450, canvas.logicalWidth * 0.4);
+        ctx.arc(hoop.x + 45, canvas.logicalHeight - floorHeight, arcRadius, Math.PI * 0.7, Math.PI * 1.3);
+        ctx.stroke();
+    }
+}
+
+function handleScore() {
+    gameState.successfulShots++;
+    const points = ball.isMoney ? 2 : 1;
+    const bonusPoints = gameState.combo * points;
+    gameState.score += points + bonusPoints;
+    gameState.combo++;
+    
+    if (gameState.combo > gameState.maxCombo) {
+        gameState.maxCombo = gameState.combo;
+    }
+    
+    camera.shake = 15;
+    for (let i = 0; i < 60; i++) {
+        particles.push(new Particle(
+            ball.x, ball.y,
+            ball.isMoney ? '#ffd700' : ['#2ecc71', '#ff6b35', '#00d4ff'][Math.floor(Math.random() * 3)],
+            Math.random() * 8 + 3
+        ));
+    }
+    
+    if (ball.isMoney) {
+        showMessage('💰 MONEY BALL! +2', '#ffd700');
+    } else if (gameState.combo > 3) {
+        showMessage(`🔥 ${gameState.combo}連擊！`, '#ff6b35');
+    } else {
+        showMessage('✓ 進球！', '#2ecc71');
+    }
+    
+    updateUI();
+}
+
+function shootBall() {
+    if (!player || !hoop || !powerBar) return;
+    if (ball && ball.active) return;
+    if (gameState.ballsInRack <= 0) return;
+    
+    gameState.totalShots++;
+    
+    const startX = player.x + 45;
+    const startY = player.y - 55;
+    const targetX = hoop.x + hoop.width / 2;
+    const targetY = hoop.y + 10;
+    
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    let angle, speed, speedAdjust;
+    
+    if (isPortraitMode()) {
+        // 直向：向上投籃（更難）
+        angle = -88 * Math.PI / 180; // 接近垂直但稍微偏一點
+        speed = 10 + (powerBar.power / 100) * 5; // 降低速度範圍
+        speedAdjust = 1 + (distance - 350) / 400; // 調整距離計算
+        
+        // 加入隨機偏移增加難度
+        const randomOffset = (Math.random() - 0.5) * 0.05;
+        angle += randomOffset;
+    } else {
+        // 橫向：斜向投籃
+        angle = -50 * Math.PI / 180;
+        speed = 16 + (powerBar.power / 100) * 8;
+        speedAdjust = 1 + (distance - 700) / 1000;
+    }
+    
+    const finalSpeed = speed * Math.max(0.8, Math.min(1.4, speedAdjust));
+    
+    const vx = Math.cos(angle) * finalSpeed * (dx > 0 ? 1 : -1);
+    const vy = Math.sin(angle) * finalSpeed;
+    
+    const isMoney = gameState.ballsInRack === 1;
+    ball = new Ball(startX, startY, vx, vy, isMoney);
+    
+    player.shooting = true;
+    gameState.ballsInRack--;
+    
+    if (gameState.ballsInRack === 0) {
+        setTimeout(() => {
+            nextRound();
+        }, 2500);
+    }
+    
+    powerBar.power = 0;
+    powerBar.charging = false;
+}
+
+function nextRound() {
+    gameState.currentRound++;
+    
+    if (gameState.currentRound <= gameState.totalRounds) {
+        gameState.ballsInRack = 5;
+        wind.force = Math.random() * 3;
+        wind.direction = Math.random() > 0.5 ? 1 : -1;
+        updateWindDisplay();
+        spawnPowerUp();
+        showMessage(`第 ${gameState.currentRound} 輪`, '#00d4ff');
+        updateUI();
+    } else {
+        endGame();
+    }
+}
+
+function endGame() {
+    gameState.gameActive = false;
+    if (timerInterval) clearInterval(timerInterval);
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    
+    const accuracy = gameState.totalShots > 0 
+        ? ((gameState.successfulShots / gameState.totalShots) * 100).toFixed(1)
+        : 0;
+    
+    document.getElementById('finalScore').textContent = gameState.score;
+    document.getElementById('finalAccuracy').textContent = `${accuracy}%`;
+    document.getElementById('finalCombo').textContent = gameState.maxCombo;
+    
+    setTimeout(() => {
+        switchScreen('gameover');
+    }, 1500);
+}
+
+function updateUI() {
+    document.getElementById('score').textContent = gameState.score;
+    document.getElementById('timer').textContent = gameState.timeLeft;
+    document.getElementById('round').textContent = `第 ${gameState.currentRound}/${gameState.totalRounds} 輪`;
+    
+    const accuracy = gameState.totalShots > 0 
+        ? ((gameState.successfulShots / gameState.totalShots) * 100).toFixed(1)
+        : 0;
+    document.getElementById('accuracy').textContent = `${accuracy}%`;
+    
+    updateComboDisplay();
+}
+
+function updateComboDisplay() {
+    const comboDisplay = document.getElementById('comboDisplay');
+    if (gameState.combo > 1) {
+        comboDisplay.textContent = `🔥 ${gameState.combo} 連擊！`;
+        comboDisplay.style.display = 'block';
+    } else {
+        comboDisplay.style.display = 'none';
+    }
+}
+
+function showMessage(text, color = '#ffd700') {
+    const messageEl = document.getElementById('gameMessage');
+    messageEl.textContent = text;
+    messageEl.style.color = color;
+    messageEl.classList.add('show');
+    
+    setTimeout(() => {
+        messageEl.classList.remove('show');
+    }, 1500);
+}
+
+function switchScreen(screen) {
+    document.getElementById('mainMenu').classList.remove('active');
+    document.getElementById('gameScreen').classList.remove('active');
+    document.getElementById('leaderboardScreen').classList.remove('active');
+    document.getElementById('gameOverScreen').classList.remove('active');
+    
+    if (screen === 'menu') {
+        document.getElementById('mainMenu').classList.add('active');
+    } else if (screen === 'game') {
+        document.getElementById('gameScreen').classList.add('active');
+    } else if (screen === 'leaderboard') {
+        document.getElementById('leaderboardScreen').classList.add('active');
+        displayLeaderboard();
+    } else if (screen === 'gameover') {
+        document.getElementById('gameOverScreen').classList.add('active');
+    }
+}
+
+function startGame() {
+    switchScreen('game');
+    initGame();
+    
+    timerInterval = setInterval(() => {
+        if (activePowerUp === 'freeze') return;
+        gameState.timeLeft--;
+        updateUI();
+        if (gameState.timeLeft <= 0) endGame();
+    }, 1000);
+    
+    gameLoop();
+}
+
+// ========== 排行榜系統 ==========
+function loadLeaderboard() {
+    const data = localStorage.getItem('nbaProShooterLeaderboard');
+    return data ? JSON.parse(data) : [];
+}
+
+function saveLeaderboard(leaderboard) {
+    localStorage.setItem('nbaProShooterLeaderboard', JSON.stringify(leaderboard));
+}
+
+function addScore(name, score, accuracy, combo) {
+    const leaderboard = loadLeaderboard();
+    const date = new Date().toLocaleDateString('zh-TW');
+    
+    leaderboard.push({
+        name: name,
+        score: score,
+        accuracy: accuracy,
+        combo: combo,
+        date: date
+    });
+    
+    leaderboard.sort((a, b) => b.score - a.score);
+    const top10 = leaderboard.slice(0, 10);
+    saveLeaderboard(top10);
+    return top10;
+}
+
+function displayLeaderboard() {
+    const leaderboard = loadLeaderboard();
+    const listElement = document.getElementById('leaderboardList');
+    
+    if (leaderboard.length === 0) {
+        listElement.innerHTML = '<div class="empty-leaderboard">還沒有任何記錄<br>快來挑戰吧！🏀</div>';
+        return;
+    }
+    
+    let html = '';
+    leaderboard.forEach((entry, index) => {
+        const rankClass = index < 3 ? `rank-${index + 1}` : '';
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+        
+        html += `
+            <div class="leaderboard-item ${rankClass}">
+                <span class="leaderboard-rank">${medal}</span>
+                <span class="leaderboard-name">${entry.name}</span>
+                <span class="leaderboard-score">${entry.score} 分</span>
+            </div>
+        `;
+    });
+    
+    listElement.innerHTML = html;
+}
+
+function clearLeaderboard() {
+    if (confirm('確定要清除所有排行榜記錄嗎？')) {
+        localStorage.removeItem('nbaProShooterLeaderboard');
+        displayLeaderboard();
+        showMessage('排行榜已清除！', '#e74c3c');
+    }
+}
+
+// ========== 事件監聽 ==========
+document.getElementById('playBtn').addEventListener('click', startGame);
+
+document.getElementById('leaderboardMenuBtn').addEventListener('click', () => {
+    switchScreen('leaderboard');
+});
+
+document.getElementById('backToMenuBtn').addEventListener('click', () => {
+    switchScreen('menu');
+});
+
+document.getElementById('clearLeaderboardBtn').addEventListener('click', clearLeaderboard);
+
+document.getElementById('submitScoreBtn').addEventListener('click', () => {
+    const name = document.getElementById('playerNameInput').value.trim();
+    
+    if (!name) {
+        alert('請輸入你的名字！');
+        return;
+    }
+    
+    const accuracy = gameState.totalShots > 0 
+        ? ((gameState.successfulShots / gameState.totalShots) * 100).toFixed(1)
+        : 0;
+    
+    addScore(name, gameState.score, accuracy, gameState.maxCombo);
+    document.getElementById('playerNameInput').value = '';
+    switchScreen('leaderboard');
+});
+
+document.getElementById('skipBtn').addEventListener('click', () => {
+    switchScreen('menu');
+});
+
+document.getElementById('playerNameInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        document.getElementById('submitScoreBtn').click();
+    }
+});
+
+// 滑鼠控制
+canvas.addEventListener('mousedown', () => {
+    if (!gameState.gameActive || !powerBar) return;
+    if (ball && ball.active) return;
+    if (gameState.ballsInRack <= 0) return;
+    powerBar.charging = true;
+});
+
+canvas.addEventListener('mouseup', () => {
+    if (!gameState.gameActive || !powerBar) return;
+    if (!powerBar.charging) return;
+    if (powerBar.power >= 10) {
+        shootBall();
+    } else {
+        powerBar.charging = false;
+        powerBar.power = 0;
+    }
+});
+
+// 鍵盤控制
+let spaceKeyDown = false;
+
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !spaceKeyDown) {
+        e.preventDefault();
+        if (!gameState.gameActive || !powerBar) return;
+        if (ball && ball.active) return;
+        if (gameState.ballsInRack <= 0) return;
+        spaceKeyDown = true;
+        powerBar.charging = true;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' && spaceKeyDown) {
+        e.preventDefault();
+        spaceKeyDown = false;
+        if (!gameState.gameActive || !powerBar) return;
+        if (!powerBar.charging) return;
+        if (powerBar.power >= 10) {
+            shootBall();
+        } else {
+            powerBar.charging = false;
+            powerBar.power = 0;
+        }
+    }
+});
+
+// 觸控支援
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!gameState.gameActive || !powerBar) return;
+    if (ball && ball.active) return;
+    if (gameState.ballsInRack <= 0) return;
+    powerBar.charging = true;
+});
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (!gameState.gameActive || !powerBar) return;
+    if (!powerBar.charging) return;
+    if (powerBar.power >= 10) {
+        shootBall();
+    } else {
+        powerBar.charging = false;
+        powerBar.power = 0;
+    }
+});
+
+// 初始繪製
+const w = canvas.logicalWidth || canvas.width;
+const h = canvas.logicalHeight || canvas.height;
+ctx.fillStyle = '#1a1f3a';
+ctx.fillRect(0, 0, w, h);
+ctx.fillStyle = '#fff';
+ctx.font = '36px Orbitron';
+ctx.textAlign = 'center';
+ctx.fillText('🏀 NBA PRO SHOOTER 🏀', w / 2, h / 2);
+
+console.log('🎮 NBA PRO SHOOTER v2.0 已載入！');
+console.log('✨ 新功能：道具系統、風向系統、排行榜');
+console.log('🔥 準備好挑戰了嗎？');
+
+
+// ========== 模式切換功能 ==========
+function toggleGameMode() {
+    const modes = ['auto', 'landscape', 'portrait'];
+    const currentIndex = modes.indexOf(gameMode);
+    gameMode = modes[(currentIndex + 1) % modes.length];
+    
+    // 儲存偏好設定
+    localStorage.setItem('nbaProShooterMode', gameMode);
+    
+    // 更新按鈕圖示
+    updateModeIcon();
+    
+    // 顯示提示
+    showModeHint();
+    
+    // 重新調整 Canvas 和遊戲物件
+    resizeCanvas();
+    if (gameState.gameActive && player && hoop) {
+        repositionGameObjects();
+    }
+}
+
+function updateModeIcon() {
+    const modeIcon = document.getElementById('modeIcon');
+    if (!modeIcon) return;
+    
+    if (gameMode === 'auto') {
+        modeIcon.textContent = '🔄';
+    } else if (gameMode === 'landscape') {
+        modeIcon.textContent = '↔️';
+    } else {
+        modeIcon.textContent = '↕️';
+    }
+}
+
+function showModeHint() {
+    const hints = {
+        'auto': '自動模式：根據螢幕自動調整',
+        'landscape': '橫向模式：左右投籃',
+        'portrait': '直向模式：上下投籃'
+    };
+    
+    showMessage(hints[gameMode], '#00fff7');
+}
+
+// 初始化模式圖示
+document.addEventListener('DOMContentLoaded', () => {
+    updateModeIcon();
+});
+
+// 模式切換按鈕事件
+const modeToggleBtn = document.getElementById('modeToggleBtn');
+if (modeToggleBtn) {
+    modeToggleBtn.addEventListener('click', toggleGameMode);
 }
