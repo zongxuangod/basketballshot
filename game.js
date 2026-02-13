@@ -8,8 +8,19 @@ function resizeCanvas() {
     const isSmallMobile = window.innerWidth <= 480;
     const isPortrait = window.innerHeight > window.innerWidth;
     
-    if (isPortrait && isMobile) {
-        // 手機直向：使用接近正方形的比例
+    // 判斷實際使用的模式
+    let usePortraitMode = false;
+    if (gameMode === 'portrait') {
+        usePortraitMode = true;
+    } else if (gameMode === 'landscape') {
+        usePortraitMode = false;
+    } else {
+        // auto 模式：根據螢幕判斷
+        usePortraitMode = isPortrait && isMobile;
+    }
+    
+    if (usePortraitMode) {
+        // 直向模式：正方形
         canvas.width = Math.min(window.innerWidth - 20, 500);
         canvas.height = Math.min(window.innerWidth - 20, 500);
     } else if (isSmallMobile) {
@@ -19,6 +30,7 @@ function resizeCanvas() {
         canvas.width = Math.min(window.innerWidth - 40, 900);
         canvas.height = Math.min(window.innerHeight * 0.6, 600);
     } else {
+        // 桌面版：固定尺寸
         canvas.width = 1400;
         canvas.height = 800;
     }
@@ -27,15 +39,12 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', () => {
     const wasActive = gameState.gameActive;
+    const oldWidth = canvas.width;
+    const oldHeight = canvas.height;
     resizeCanvas();
-    if (wasActive && player && hoop) {
-        // 重新調整物件位置
-        const scaleX = canvas.width / 1400;
-        const scaleY = canvas.height / 800;
-        player.x = 300 * scaleX;
-        player.y = canvas.height - 200;
-        hoop.x = canvas.width - 400 * scaleX;
-        hoop.y = 180 * scaleY;
+    
+    if (wasActive && player && hoop && (oldWidth !== canvas.width || oldHeight !== canvas.height)) {
+        repositionGameObjects();
     }
 });
 
@@ -53,6 +62,9 @@ let gameState = {
     successfulShots: 0,
     gameActive: false
 };
+
+// 遊戲模式：'auto'（自動偵測）、'landscape'（橫向）、'portrait'（直向）
+let gameMode = 'auto';
 
 // 遊戲物件
 let player = null;
@@ -528,20 +540,44 @@ class PowerUp {
 }
 
 // ========== 遊戲初始化 ==========
-function initGame() {
-    const scaleX = canvas.width / 1400;
-    const scaleY = canvas.height / 800;
-    
-    // 根據螢幕大小調整位置
+function isPortraitMode() {
+    if (gameMode === 'portrait') return true;
+    if (gameMode === 'landscape') return false;
+    // auto 模式
     const isMobile = window.innerWidth <= 768;
     const isPortrait = window.innerHeight > window.innerWidth;
+    return isMobile && isPortrait;
+}
+
+function repositionGameObjects() {
+    if (!player || !hoop) return;
     
-    if (isMobile && isPortrait) {
-        // 手機直向：調整為上下配置
+    if (isPortraitMode()) {
+        // 直向：上下配置
+        player.x = canvas.width / 2;
+        player.y = canvas.height - 150;
+        hoop.x = canvas.width / 2 - 45;
+        hoop.y = 180;
+    } else {
+        // 橫向：左右配置
+        const scaleX = canvas.width / 1400;
+        const scaleY = canvas.height / 800;
+        player.x = 300 * scaleX;
+        player.y = canvas.height - 200;
+        hoop.x = canvas.width - 400 * scaleX;
+        hoop.y = 180 * scaleY;
+    }
+}
+
+function initGame() {
+    if (isPortraitMode()) {
+        // 直向：上下配置
         player = new Player(canvas.width / 2, canvas.height - 150);
         hoop = new Hoop(canvas.width / 2 - 45, 180);
     } else {
-        // 桌面或橫向：左右配置
+        // 橫向：左右配置
+        const scaleX = canvas.width / 1400;
+        const scaleY = canvas.height / 800;
         player = new Player(300 * scaleX, canvas.height - 200);
         hoop = new Hoop(canvas.width - 400 * scaleX, 180 * scaleY);
     }
@@ -593,17 +629,13 @@ function spawnPowerUp() {
         const types = ['bigHoop', 'slowTime', 'noWind', 'freeze'];
         const type = types[Math.floor(Math.random() * types.length)];
         
-        // 根據螢幕調整道具位置
-        const isMobile = window.innerWidth <= 768;
-        const isPortrait = window.innerHeight > window.innerWidth;
-        
         let x, y;
-        if (isMobile && isPortrait) {
-            // 手機直向：道具出現在中間區域
+        if (isPortraitMode()) {
+            // 直向：道具出現在中間區域
             x = canvas.width / 2 + (Math.random() - 0.5) * 150;
             y = canvas.height / 2 + (Math.random() - 0.5) * 100;
         } else {
-            // 桌面或橫向：道具出現在飛行路徑上
+            // 橫向：道具出現在飛行路徑上
             x = Math.random() * (canvas.width - 400) + 200;
             y = Math.random() * 200 + 300;
         }
@@ -740,21 +772,16 @@ function gameLoop() {
 }
 
 function drawBackground() {
-    const isMobile = window.innerWidth <= 768;
-    const isPortrait = window.innerHeight > window.innerWidth;
-    
-    // 地板
-    const floorHeight = isMobile && isPortrait ? 100 : 200;
+    const floorHeight = isPortraitMode() ? 100 : 200;
     const floorGradient = ctx.createLinearGradient(0, canvas.height - floorHeight, 0, canvas.height);
     floorGradient.addColorStop(0, '#d4a574');
     floorGradient.addColorStop(1, '#b8935f');
     ctx.fillStyle = floorGradient;
     ctx.fillRect(0, canvas.height - floorHeight, canvas.width, floorHeight);
     
-    // 地板線條
     ctx.strokeStyle = 'rgba(139, 111, 71, 0.3)';
     ctx.lineWidth = 2;
-    const lineSpacing = isMobile ? 30 : 50;
+    const lineSpacing = window.innerWidth <= 768 ? 30 : 50;
     for (let i = 0; i < canvas.width; i += lineSpacing) {
         ctx.beginPath();
         ctx.moveTo(i, canvas.height - floorHeight);
@@ -762,12 +789,13 @@ function drawBackground() {
         ctx.stroke();
     }
     
-    // 三分線（只在橫向或桌面顯示）
-    if (!isPortrait || !isMobile) {
+    // 三分線（橫向模式顯示）
+    if (!isPortraitMode()) {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.arc(hoop.x + 45, canvas.height - floorHeight, 450, Math.PI * 0.7, Math.PI * 1.3);
+        const arcRadius = Math.min(450, canvas.width * 0.4);
+        ctx.arc(hoop.x + 45, canvas.height - floorHeight, arcRadius, Math.PI * 0.7, Math.PI * 1.3);
         ctx.stroke();
     }
 }
@@ -819,19 +847,15 @@ function shootBall() {
     const dy = targetY - startY;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    // 根據螢幕調整投籃參數
-    const isMobile = window.innerWidth <= 768;
-    const isPortrait = window.innerHeight > window.innerWidth;
-    
     let angle, speed, speedAdjust;
     
-    if (isMobile && isPortrait) {
-        // 手機直向：向上投籃
-        angle = -85 * Math.PI / 180; // 幾乎垂直向上
+    if (isPortraitMode()) {
+        // 直向：向上投籃
+        angle = -85 * Math.PI / 180;
         speed = 12 + (powerBar.power / 100) * 6;
         speedAdjust = 1 + (distance - 300) / 500;
     } else {
-        // 桌面或橫向：斜向投籃
+        // 橫向：斜向投籃
         angle = -50 * Math.PI / 180;
         speed = 16 + (powerBar.power / 100) * 8;
         speedAdjust = 1 + (distance - 700) / 1000;
@@ -1140,3 +1164,58 @@ ctx.fillText('🏀 NBA PRO SHOOTER 🏀', canvas.width / 2, canvas.height / 2);
 console.log('🎮 NBA PRO SHOOTER v2.0 已載入！');
 console.log('✨ 新功能：道具系統、風向系統、排行榜');
 console.log('🔥 準備好挑戰了嗎？');
+
+
+// ========== 模式切換功能 ==========
+function toggleGameMode() {
+    const modes = ['auto', 'landscape', 'portrait'];
+    const currentIndex = modes.indexOf(gameMode);
+    gameMode = modes[(currentIndex + 1) % modes.length];
+    
+    // 儲存偏好設定
+    localStorage.setItem('nbaProShooterMode', gameMode);
+    
+    // 更新按鈕圖示
+    const modeIcon = document.getElementById('modeIcon');
+    if (gameMode === 'auto') {
+        modeIcon.textContent = '🔄';
+    } else if (gameMode === 'landscape') {
+        modeIcon.textContent = '↔️';
+    } else {
+        modeIcon.textContent = '↕️';
+    }
+    
+    // 顯示提示
+    showModeHint();
+    
+    // 重新調整 Canvas 和遊戲物件
+    resizeCanvas();
+    if (gameState.gameActive && player && hoop) {
+        repositionGameObjects();
+    }
+}
+
+function showModeHint() {
+    const hints = {
+        'auto': '自動模式：根據螢幕自動調整',
+        'landscape': '橫向模式：左右投籃',
+        'portrait': '直向模式：上下投籃'
+    };
+    
+    showMessage(hints[gameMode], '#00fff7');
+}
+
+// 載入儲存的模式偏好
+const savedMode = localStorage.getItem('nbaProShooterMode');
+if (savedMode && ['auto', 'landscape', 'portrait'].includes(savedMode)) {
+    gameMode = savedMode;
+    const modeIcon = document.getElementById('modeIcon');
+    if (gameMode === 'landscape') {
+        modeIcon.textContent = '↔️';
+    } else if (gameMode === 'portrait') {
+        modeIcon.textContent = '↕️';
+    }
+}
+
+// 模式切換按鈕事件
+document.getElementById('modeToggleBtn').addEventListener('click', toggleGameMode);
